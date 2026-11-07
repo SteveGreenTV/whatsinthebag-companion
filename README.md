@@ -2,6 +2,8 @@
 
 An offline, read-only desktop viewer for inventory snapshots created by the What's in the bag? WoW addon. Browse carried bags, Character Banks and the Warband Bank, with search, filters, item levels and saved item details.
 
+Browse the [screenshot gallery](https://github.com/SteveGreenTV/whatsinthebag-companion/wiki/Screenshots) for full-resolution previews of character windows, search, filters and item layouts.
+
 ## Download
 
 Open the [Releases page](https://github.com/SteveGreenTV/whatsinthebag-companion/releases), download `WITB_Companion_<version>.exe`, and run it on Windows x64. No installation or Node.js is required. The executable is unsigned, so Windows may display an unknown-publisher or SmartScreen warning.
