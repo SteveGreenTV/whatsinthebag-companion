@@ -1,4 +1,4 @@
-name: Windows Portable Release
+name: Desktop Release
 
 on:
   push:
@@ -50,9 +50,66 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  build-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Check release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node -e 'if (process.env.RELEASE_TAG !== `v${require("./package.json").version}`) process.exit(1)'
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Build macOS DMG
+        env:
+          ARCH: ${{ matrix.arch }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run "release:mac:$ARCH"
+      - name: Verify DMG and generate checksum
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./package.json").version')
+          artifact="WITB_Companion_${version}_macos_${ARCH}.dmg"
+          test -s "release/$artifact"
+          mountpoint="$RUNNER_TEMP/witb-dmg"
+          mkdir -p "$mountpoint"
+          hdiutil attach "release/$artifact" -mountpoint "$mountpoint" -nobrowse -readonly
+          trap 'hdiutil detach "$mountpoint"' EXIT
+          app=$(find "$mountpoint" -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$app"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+          lipo -verify_arch "$ARCH" "$app/Contents/MacOS/$executable"
+          codesign --verify --deep --strict "$app"
+          test -s "$app/Contents/Resources/icon.icns"
+          (cd release && shasum -a 256 "$artifact" > "$artifact.sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.dmg.sha256
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, build-macos]
     runs-on: windows-latest
     permissions:
       contents: write
@@ -61,6 +118,14 @@ jobs:
         with:
           name: windows-portable
           path: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+          path: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-x64
+          path: release
       - name: Publish GitHub release
         shell: pwsh
         env:
@@ -68,11 +133,21 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
+          $version = $env:RELEASE_TAG.Substring(1)
+          $names = @("WITB_Companion_$version.exe", "WITB_Companion_${version}_macos_arm64.dmg", "WITB_Companion_${version}_macos_x64.dmg")
+          $artifacts = @()
+          foreach ($name in $names) {
+            $artifact = Get-Item -LiteralPath "release/$name" -ErrorAction Stop
+            $checksum = Get-Item -LiteralPath "release/$name.sha256" -ErrorAction Stop
+            $expected = ((Get-Content -LiteralPath $checksum.FullName -Raw).Trim() -split '\s+')[0]
+            $actual = (Get-FileHash -LiteralPath $artifact.FullName -Algorithm SHA256).Hash
+            if ($expected -notmatch '^[a-fA-F0-9]{64}$' -or $expected -ine $actual) { throw "Checksum mismatch for $name" }
+            $artifacts += $artifact.FullName, $checksum.FullName
+          }
           gh release view $env:RELEASE_TAG --json tagName 2>$null
           if ($LASTEXITCODE -ne 0) {
             gh release create $env:RELEASE_TAG --verify-tag --generate-notes --title "WITB Companion $env:RELEASE_TAG"
             if ($LASTEXITCODE -ne 0) { throw 'Could not create GitHub release.' }
           }
-          $artifacts = @(Get-ChildItem release -File | ForEach-Object { $_.FullName })
           gh release upload $env:RELEASE_TAG @artifacts --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload release artifacts.' }

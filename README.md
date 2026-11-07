@@ -6,7 +6,13 @@ Browse the [screenshot gallery](https://github.com/SteveGreenTV/whatsinthebag-co
 
 ## Download
 
-Open the [Releases page](https://github.com/SteveGreenTV/whatsinthebag-companion/releases), download `WITB_Companion_<version>.exe`, and run it on Windows x64. No installation or Node.js is required. The executable is unsigned, so Windows may display an unknown-publisher or SmartScreen warning.
+Open the [Releases page](https://github.com/SteveGreenTV/whatsinthebag-companion/releases) and choose the file for your computer:
+
+- Windows x64: `WITB_Companion_<version>.exe` is portable and requires no installation. It is unsigned, so Windows may display an unknown-publisher or SmartScreen warning.
+- macOS Apple silicon: `WITB_Companion_<version>_macos_arm64.dmg`.
+- macOS Intel: `WITB_Companion_<version>_macos_x64.dmg`.
+
+For macOS, open the disk image and drag the app to Applications. The app is ad-hoc signed, not Apple Developer ID signed or notarized, so Gatekeeper may block it. If you trust the download, attempt to open it, then use **System Settings > Privacy & Security > Open Anyway** to approve it. macOS builds and the WoW icon export path have not yet been verified in a real Mac client. Node.js is not required to run the downloads.
 
 Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) in Retail WoW to create snapshots. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
@@ -48,7 +54,7 @@ Keep the exported `.blp` files in that directory structure; do not convert or co
 
 ## Run from Source
 
-Install [Git](https://git-scm.com/downloads/win) and [Node.js 24 LTS](https://nodejs.org/), including npm. The public repository uses `main` as its default branch. Open PowerShell and clone it:
+Install [Git](https://git-scm.com/downloads) and [Node.js 24 LTS](https://nodejs.org/), including npm. The public repository uses `main` as its default branch. Open PowerShell on Windows or Terminal on macOS and clone it:
 
 ```powershell
 git clone --branch main https://github.com/SteveGreenTV/whatsinthebag-companion.git WITB_Companion
@@ -57,7 +63,7 @@ npm ci
 npm run desktop
 ```
 
-If you already checked out the repository, open PowerShell in its root folder and run only `npm ci` and `npm run desktop`. The desktop command builds the interface and starts Electron. Select your `_retail_` folder just as you would in the downloaded EXE; WoW snapshots and icon exports are not included in the checkout.
+If you already checked out the repository, open a terminal in its root folder and run only `npm ci` and `npm run desktop`. The desktop command builds the interface and starts Electron. Select your `_retail_` folder just as you would in the downloaded app; WoW snapshots and icon exports are not included in the checkout.
 
 For an optional browser version, run:
 
@@ -78,7 +84,18 @@ npm run release:win:portable
 This builds a Windows x64 portable executable at:
 
 ```text
-release/WITB_Companion_0.3.0.exe
+release/WITB_Companion_0.3.1.exe
 ```
 
 The filename follows the version in `package.json`. Run the EXE directly, or copy it to another Windows x64 computer. It includes Electron and does not require Node.js on that computer. Building locally does not publish a GitHub release.
+
+## Build a macOS DMG
+
+On macOS, after `npm ci`, run the command for your target architecture:
+
+```sh
+npm run release:mac:arm64
+npm run release:mac:x64
+```
+
+Each command builds an ad-hoc-signed, unnotarized DMG in `release/`, named with the package version and architecture. The build uses the macOS `sips`, `iconutil`, and code-signing tools. Building locally does not publish a GitHub release.

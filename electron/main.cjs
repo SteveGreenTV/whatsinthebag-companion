@@ -170,7 +170,7 @@ function windowOptions() {
 		minHeight: 620,
 		show: false,
 		backgroundColor: '#111315',
-		icon: appIcon,
+		...(process.platform === 'darwin' ? {} : { icon: appIcon }),
 		autoHideMenuBar: true,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.cjs'),
