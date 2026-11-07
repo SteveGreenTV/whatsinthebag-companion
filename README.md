@@ -8,7 +8,7 @@ Browse the [screenshot gallery](https://github.com/SteveGreenTV/whatsinthebag-co
 
 Open the [Releases page](https://github.com/SteveGreenTV/whatsinthebag-companion/releases), download `WITB_Companion_<version>.exe`, and run it on Windows x64. No installation or Node.js is required. The executable is unsigned, so Windows may display an unknown-publisher or SmartScreen warning.
 
-Install the What's in the bag? addon in Retail WoW to create snapshots. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
+Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) in Retail WoW to create snapshots. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
 ## Use
 
