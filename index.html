@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="theme-color" content="#38271e" />
+		<title>What's in the bag? | WITB Companion</title>
+		<link rel="stylesheet" href="./src/style.css" />
+	</head>
+	<body>
+		<main class="frame" aria-labelledby="window-title">
+			<header class="titlebar">
+				<div class="portrait" aria-hidden="true"><img src="./assets/app.ico" alt="" /></div>
+				<div class="title-copy">
+					<h1 id="window-title">What's in the bag?</h1>
+				</div>
+				<div class="window-state" id="window-state">OFFLINE</div>
+				<button class="close-button" type="button" title="Clear loaded snapshots" aria-label="Clear loaded snapshots">×</button>
+			</header>
+
+			<section class="control-row" aria-label="Snapshot sources">
+				<div class="control-spacer" aria-hidden="true"></div>
+				<div class="source-shortcuts" aria-label="Snapshot sources">
+					<label class="source-shortcut retail-control" id="retail-folder-control" title="Select the WoW Retail folder">
+						<span aria-hidden="true">R</span>
+						<input id="retail-folder" type="file" webkitdirectory directory aria-label="Select the WoW Retail folder" />
+					</label>
+					<div class="account-picker">
+						<button class="source-shortcut account-control" id="account-toggle" type="button" title="Select SavedVariables account" aria-label="Select SavedVariables account" aria-expanded="false" aria-controls="account-list" disabled>
+							<span aria-hidden="true">A</span>
+						</button>
+						<select id="account-select" aria-hidden="true" tabindex="-1" hidden disabled>
+							<option value="">Choose account</option>
+						</select>
+						<div class="character-menu roster-list account-menu" id="account-list" role="dialog" aria-label="SavedVariables accounts" hidden>
+							<h2 class="roster-heading">Accounts</h2>
+							<div class="rail-empty">Select a snapshot file</div>
+						</div>
+					</div>
+				</div>
+				<div class="character-picker">
+					<button class="character-toggle" id="character-toggle" type="button" aria-label="Choose character and storage" title="Choose character and storage" aria-expanded="false" aria-controls="character-list" disabled>
+						<span>Alts</span><span aria-hidden="true">▾</span><span id="character-selection-label" class="visually-hidden">Choose character</span>
+					</button>
+					<div class="character-menu" id="character-list" role="dialog" aria-label="Alts" hidden>
+						<div class="rail-empty"><span class="empty-rune" aria-hidden="true">◇</span><span>Select a snapshot file</span></div>
+					</div>
+				</div>
+			</section>
+
+			<div class="workspace">
+				<aside class="category-rail" aria-label="Characters and storage">
+					<div class="view-picker">
+						<button class="view-button" id="view-toggle" type="button" aria-expanded="false" aria-controls="view-menu">View <span aria-hidden="true">▾</span></button>
+						<div class="filter-menu view-menu" id="view-menu" hidden>
+							<p class="menu-heading">VIEW</p>
+							<button class="menu-reset" id="view-check-all" type="button">Check all</button>
+							<button class="menu-reset" id="view-uncheck-all" type="button">Uncheck all</button>
+							<hr />
+							<label><input type="checkbox" value="category" checked /> Category</label>
+							<label><input type="checkbox" value="subcategory" checked /> Subcategory</label>
+							<label><input type="checkbox" value="itemNames" checked /> Item names</label>
+						</div>
+					</div>
+					<div class="category-list-heading">
+						<span>CATEGORIES <small id="category-total"></small></span>
+						<button class="category-visibility" id="toggle-all-categories" type="button" title="Hide all categories" aria-label="Hide all categories">◉</button>
+					</div>
+					<div class="category-list" id="category-list">
+						<div class="rail-empty">Load a snapshot to see categories</div>
+					</div>
+					<div class="rail-footer">
+						<div class="source-status-line"><span class="status-dot"></span><span id="source-status" aria-live="polite">No file loaded</span></div>
+						<progress id="source-progress" class="source-progress" max="100" value="0" aria-label="File scan or loading progress" hidden></progress>
+					</div>
+				</aside>
+
+				<section class="inventory-pane" aria-label="Snapshot contents">
+					<div class="search-row">
+						<div class="search-help-wrap">
+							<label class="search-box">
+								<span aria-hidden="true">⌕</span>
+								<input id="search" type="search" placeholder="Filter items" autocomplete="off" aria-describedby="search-help" />
+							</label>
+							<div class="search-help" id="search-help" role="tooltip">
+								<h3>Search examples</h3>
+								<div class="search-example"><code>potion healing</code><span>Match both words in searchable item text.</span></div>
+								<div class="search-example"><code>slot:chest armor:plate</code><span>Match chest-slot plate armor; robes count as chest.</span></div>
+								<div class="search-example"><code>legs leather</code><span>Match leather leg armor.</span></div>
+								<div class="search-example"><code>type:sword</code><span>Match one- or two-handed swords.</span></div>
+								<div class="search-example"><code>category:armor</code><span>Match items in the Armor category.</span></div>
+								<div class="search-example"><code>soulbound upgradeable</code><span>Match soulbound items that can still be upgraded.</span></div>
+								<div class="search-example"><code>warbound</code><span>Match Warbound items.</span></div>
+								<div class="search-example"><code>name:plate</code><span>Match “plate” in item names only.</span></div>
+								<p>All terms must match. Clear the input to reset.</p>
+							</div>
+						</div>
+						<div class="filter-wrap">
+							<button class="filter-button" id="filter-toggle" type="button" aria-expanded="false"><span aria-hidden="true">☷</span> Filters</button>
+							<div class="filter-menu" id="filter-menu" hidden>
+								<p class="menu-heading">QUICK FILTERS</p>
+								<button class="menu-reset" id="filter-clear" type="button">Uncheck all</button>
+								<hr />
+								<label><input type="checkbox" value="upgradeable" /> Upgradeable</label>
+								<label><input type="checkbox" value="soulbound" /> Soulbound</label>
+								<label><input type="checkbox" value="warbound" /> Warbound</label>
+								<label><input type="checkbox" value="openable" /> Openable</label>
+								<label><input type="checkbox" value="usable" /> Usable</label>
+								<hr />
+								<p class="menu-subheading">ARMOR</p>
+								<label><input type="checkbox" value="armor:cloth" /> Cloth armor</label>
+								<label><input type="checkbox" value="armor:leather" /> Leather armor</label>
+								<label><input type="checkbox" value="armor:mail" /> Mail armor</label>
+								<label><input type="checkbox" value="armor:plate" /> Plate armor</label>
+							</div>
+						</div>
+					</div>
+					<div class="snapshot-heading">
+						<div><p class="eyebrow" id="storage-label">NO SNAPSHOT SELECTED</p><h2 id="storage-title">Choose a character</h2></div>
+						<p class="capture-time" id="capture-time"></p>
+					</div>
+					<div class="inventory-content" id="inventory-content">
+						<div class="welcome-state">
+							<div class="welcome-mark" aria-hidden="true">✦</div>
+							<h3>Ready when you are</h3>
+							<p>Load a saved inventory and its exported art to browse bags and banks.</p>
+						</div>
+					</div>
+				</section>
+			</div>
+
+			<footer class="frame-footer">
+				<div class="footer-rule"></div>
+				<span id="footer-message">READ-ONLY SNAPSHOTS</span>
+			</footer>
+		</main>
+		<script type="module" src="./src/main.ts"></script>
+	</body>
+</html>

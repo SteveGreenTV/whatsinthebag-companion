@@ -1,0 +1,52 @@
+{
+  "name": "whats-in-the-bag-witb-companion",
+  "private": true,
+  "description": "Offline, read-only viewer for What's in the Bag? inventory snapshots.",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "desktop": "npm run build && electron .",
+    "release:win:portable": "npm run build && electron-builder --win portable --x64 --publish never",
+    "icons:build": "node scripts/build-icon-index.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "wow-blp-web": "0.6.8"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.12"
+  },
+  "build": {
+    "appId": "com.whatsinthebag.witbcompanion",
+    "productName": "What's in the bag? WITB Companion",
+    "artifactName": "WITB_Companion_${version}.${ext}",
+    "files": [
+      "dist/**/*",
+      "electron/main.cjs",
+      "electron/preload.cjs",
+      "assets/app.ico"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "assets/app.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}

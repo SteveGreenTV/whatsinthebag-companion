@@ -1,0 +1,16 @@
+node_modules/
+dist/
+release/
+
+/AGENTS.md
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.lua
+*.lua.bak
+*.csv
+WTF/
+BlizzardInterfaceArt/
