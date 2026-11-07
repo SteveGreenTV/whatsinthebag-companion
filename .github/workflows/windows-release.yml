@@ -94,7 +94,9 @@ jobs:
           app=$(find "$mountpoint" -maxdepth 1 -name '*.app' -type d -print -quit)
           test -n "$app"
           executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
-          lipo -verify_arch "$ARCH" "$app/Contents/MacOS/$executable"
+          expected_arch="$ARCH"
+          if [ "$ARCH" = x64 ]; then expected_arch=x86_64; fi
+          lipo "$app/Contents/MacOS/$executable" -verify_arch "$expected_arch"
           codesign --verify --deep --strict "$app"
           test -s "$app/Contents/Resources/icon.icns"
           (cd release && shasum -a 256 "$artifact" > "$artifact.sha256")
