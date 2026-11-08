@@ -3,6 +3,15 @@ export interface LuaTable {
 }
 export type LuaValue = LuaTable | string | number | boolean | null;
 
+export function snapshotMatchesNameSearch(snapshot: LuaValue | undefined, query: string): boolean {
+	const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+	if (!terms.length || !isLuaTable(snapshot)) return false;
+	return tableValues(snapshot.bags).some((bag) => isLuaTable(bag)
+		&& tableValues(bag.items).some((item) => isLuaTable(item)
+			&& typeof item.name === 'string'
+			&& terms.every((term) => (item.name as string).toLowerCase().includes(term))));
+}
+
 type TokenKind = 'identifier' | 'number' | 'string' | 'punctuation' | 'eof';
 
 interface Token {

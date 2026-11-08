@@ -16,11 +16,20 @@ For macOS, open the disk image and drag the app to Applications. The app is ad-h
 
 Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) in Retail WoW to create snapshots. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
+## What's New in 0.4.0
+
+- Search saved item names in the Alts popup. Matching Bags and Bank buttons are highlighted independently; nonmatches are dimmed. All search terms must occur in the same item name, ignoring case.
+- The item filter bar spans both panes with a small blank area on its left and more space above the lists.
+- The category column fits its contents, and View and Filters share red-and-gold styling.
+- Search hints and Alts/account popups render above the controls they overlap.
+
+Snapshots remain read-only. Alts search uses saved item names only and does not change the main item filter.
+
 ## Use
 
 1. Start the app and select the WoW `_retail_` folder.
 2. Open the **A** menu and select an account found under `WTF/Account/<Name>/SavedVariables/WhatsInTheBag.lua`.
-3. Use **Alts** to open a character's Bags or Bank in its own window. The main window shows the Warband Bank by default when one is available.
+3. Use **Alts** to open a character's Bags or Bank in its own window. Search inside the Alts popup to highlight storage containing a matching saved item name and dim nonmatches. Search is case-insensitive; all whitespace-separated terms must occur in the same item name. The main window shows the Warband Bank by default when one is available.
 
 Changing accounts or selecting a different Retail folder closes open character windows. Items remain read-only; the companion cannot move or use them. Hover details contain only information captured in the snapshot, not the full live WoW tooltip.
 
@@ -84,7 +93,7 @@ npm run release:win:portable
 This builds a Windows x64 portable executable at:
 
 ```text
-release/WITB_Companion_0.3.1.exe
+release/WITB_Companion_0.4.0.exe
 ```
 
 The filename follows the version in `package.json`. Run the EXE directly, or copy it to another Windows x64 computer. It includes Electron and does not require Node.js on that computer. Building locally does not publish a GitHub release.

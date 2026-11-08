@@ -1,7 +1,7 @@
 import initBlp, { blpToPng } from 'wow-blp-web';
 import blpWasmUrl from 'wow-blp-web/wow_blp_web_bg.wasm?url';
 import iconManifest from './icon-paths.json';
-import { isLuaTable, parseSavedVariables, tableValues, type LuaTable, type LuaValue } from './saved-variables';
+import { isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
 
 type StorageKey = 'bags' | 'characterBank' | 'warband';
 
@@ -89,6 +89,12 @@ const sourceStatus = document.querySelector<HTMLElement>('#source-status')!;
 const sourceProgress = document.querySelector<HTMLProgressElement>('#source-progress')!;
 const frameState = document.querySelector<HTMLElement>('#window-state')!;
 const characterList = document.querySelector<HTMLElement>('#character-list')!;
+const rosterSearchInput = document.createElement('input');
+rosterSearchInput.type = 'search';
+rosterSearchInput.placeholder = 'Search items';
+rosterSearchInput.autocomplete = 'off';
+rosterSearchInput.setAttribute('aria-label', 'Search items across alt bags and banks');
+rosterSearchInput.addEventListener('input', updateRosterSearch);
 const characterToggle = document.querySelector<HTMLButtonElement>('#character-toggle')!;
 const characterSelectionLabel = document.querySelector<HTMLElement>('#character-selection-label')!;
 const categoryList = document.querySelector<HTMLElement>('#category-list')!;
@@ -230,6 +236,7 @@ function clearSnapshotData(message: string): void {
 	characterToggle.disabled = true;
 	characterSelectionLabel.textContent = 'Choose character';
 	characterList.classList.remove('roster-list');
+	rosterSearchInput.value = '';
 	characterList.replaceChildren(makeEmptyRail(message));
 	categoryList.replaceChildren(makeEmptyRail('Load a snapshot to see categories'));
 	categoryTotal.textContent = '';
@@ -354,6 +361,10 @@ function makeStorageButton(text: string, characterKey: string | null, storage: S
 	button.type = 'button';
 	button.textContent = text;
 	button.disabled = disabled;
+	if (characterKey !== null) {
+		button.dataset.characterKey = characterKey;
+		button.dataset.storage = storage;
+	}
 	button.setAttribute('aria-pressed', String(selection.characterKey === characterKey && selection.storage === storage));
 	button.addEventListener('click', () => {
 		if (characterKey !== null && storage !== 'warband') {
@@ -409,6 +420,21 @@ function openStorageWindow(characterKey: string, storage: 'bags' | 'characterBan
 	}
 }
 
+function updateRosterSearch(): void {
+	const characters = valueTable(account?.characterSnapshots);
+	const query = rosterSearchInput.value;
+	const searching = query.trim().length > 0;
+	for (const button of characterList.querySelectorAll<HTMLButtonElement>('.storage-button')) {
+		const character = valueTable(characters?.[button.dataset.characterKey || '']);
+		const matches = snapshotMatchesNameSearch(character?.[button.dataset.storage || ''], query);
+		button.classList.toggle('is-search-match', searching && matches);
+		button.classList.toggle('is-search-miss', searching && !matches);
+		button.title = searching
+			? `${button.textContent}: ${matches ? 'Contains a matching saved item' : 'No matching saved item'}`
+			: '';
+	}
+}
+
 function renderRoster(): void {
 	if (!account) return;
 	characterList.replaceChildren();
@@ -419,6 +445,13 @@ function renderRoster(): void {
 	heading.textContent = 'Alts';
 	characterList.setAttribute('aria-labelledby', heading.id);
 	characterList.append(heading);
+	const searchBox = document.createElement('label');
+	searchBox.className = 'search-box roster-search';
+	const searchIcon = document.createElement('span');
+	searchIcon.textContent = '\u2315';
+	searchIcon.setAttribute('aria-hidden', 'true');
+	searchBox.append(searchIcon, rosterSearchInput);
+	characterList.append(searchBox);
 	const characters = valueTable(account.characterSnapshots);
 	const entries = Object.entries(characters || {})
 		.filter(([, record]) => isLuaTable(record) && (isLuaTable(record.bags) || isLuaTable(record.characterBank)))
@@ -451,6 +484,7 @@ function renderRoster(): void {
 		characterList.append(entry);
 	}
 
+	updateRosterSearch();
 	updateCharacterSelectionLabel();
 }
 
@@ -472,6 +506,7 @@ function defaultSelection(loadedAccount: LuaTable): Selection {
 }
 
 function setLoadedAccount(loadedAccount: LuaTable, preferredSelection: Selection | null, accountName: string | null): void {
+	rosterSearchInput.value = '';
 	account = loadedAccount;
 	loadedAccountName = accountName;
 	selection = preferredSelection || defaultSelection(loadedAccount);

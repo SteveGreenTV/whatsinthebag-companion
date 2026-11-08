@@ -49,33 +49,7 @@
 			</section>
 
 			<div class="workspace">
-				<aside class="category-rail" aria-label="Characters and storage">
-					<div class="view-picker">
-						<button class="view-button" id="view-toggle" type="button" aria-expanded="false" aria-controls="view-menu">View <span aria-hidden="true">▾</span></button>
-						<div class="filter-menu view-menu" id="view-menu" hidden>
-							<p class="menu-heading">VIEW</p>
-							<button class="menu-reset" id="view-check-all" type="button">Check all</button>
-							<button class="menu-reset" id="view-uncheck-all" type="button">Uncheck all</button>
-							<hr />
-							<label><input type="checkbox" value="category" checked /> Category</label>
-							<label><input type="checkbox" value="subcategory" checked /> Subcategory</label>
-							<label><input type="checkbox" value="itemNames" checked /> Item names</label>
-						</div>
-					</div>
-					<div class="category-list-heading">
-						<span>CATEGORIES <small id="category-total"></small></span>
-						<button class="category-visibility" id="toggle-all-categories" type="button" title="Hide all categories" aria-label="Hide all categories">◉</button>
-					</div>
-					<div class="category-list" id="category-list">
-						<div class="rail-empty">Load a snapshot to see categories</div>
-					</div>
-					<div class="rail-footer">
-						<div class="source-status-line"><span class="status-dot"></span><span id="source-status" aria-live="polite">No file loaded</span></div>
-						<progress id="source-progress" class="source-progress" max="100" value="0" aria-label="File scan or loading progress" hidden></progress>
-					</div>
-				</aside>
-
-				<section class="inventory-pane" aria-label="Snapshot contents">
+				<section class="filter-bar" aria-label="Item filters">
 					<div class="search-row">
 						<div class="search-help-wrap">
 							<label class="search-box">
@@ -115,6 +89,33 @@
 							</div>
 						</div>
 					</div>
+				</section>
+				<aside class="category-rail" aria-label="Characters and storage">
+					<div class="view-picker">
+						<button class="view-button" id="view-toggle" type="button" aria-expanded="false" aria-controls="view-menu">View <span aria-hidden="true">▾</span></button>
+						<div class="filter-menu view-menu" id="view-menu" hidden>
+							<p class="menu-heading">VIEW</p>
+							<button class="menu-reset" id="view-check-all" type="button">Check all</button>
+							<button class="menu-reset" id="view-uncheck-all" type="button">Uncheck all</button>
+							<hr />
+							<label><input type="checkbox" value="category" checked /> Category</label>
+							<label><input type="checkbox" value="subcategory" checked /> Subcategory</label>
+							<label><input type="checkbox" value="itemNames" checked /> Item names</label>
+						</div>
+					</div>
+					<div class="category-list-heading">
+						<span>CATEGORIES <small id="category-total"></small></span>
+						<button class="category-visibility" id="toggle-all-categories" type="button" title="Hide all categories" aria-label="Hide all categories">◉</button>
+					</div>
+					<div class="category-list" id="category-list">
+						<div class="rail-empty">Load a snapshot to see categories</div>
+					</div>
+					<div class="rail-footer">
+						<div class="source-status-line"><span class="status-dot"></span><span id="source-status" aria-live="polite">No file loaded</span></div>
+						<progress id="source-progress" class="source-progress" max="100" value="0" aria-label="File scan or loading progress" hidden></progress>
+					</div>
+				</aside>
+				<section class="inventory-pane" aria-label="Snapshot contents">
 					<div class="snapshot-heading">
 						<div><p class="eyebrow" id="storage-label">NO SNAPSHOT SELECTED</p><h2 id="storage-title">Choose a character</h2></div>
 						<p class="capture-time" id="capture-time"></p>
