@@ -107,10 +107,16 @@ test('rejects snapshots and icons resolving outside the selected root', async (c
 	assert.equal(rejected.hasIcons, false);
 	host.redirects.clear();
 	await host.select(game.gameRoot);
-	host.redirects.set(game.snapshot, path.join(host.temporary, 'outside.lua'));
-	host.redirects.set(game.icon, path.join(host.temporary, 'outside.blp'));
+	const snapshotDirectory = path.dirname(game.snapshot);
+	const outsideSnapshots = path.join(host.temporary, 'outside-snapshots');
+	await filesystem.rename(snapshotDirectory, outsideSnapshots);
+	await filesystem.symlink(outsideSnapshots, snapshotDirectory, 'junction');
+	const outsideIcons = path.join(host.temporary, 'outside-icons');
+	await filesystem.mkdir(outsideIcons);
+	await filesystem.rename(game.icon, path.join(outsideIcons, 'test.blp'));
+	await filesystem.symlink(outsideIcons, path.join(game.iconsRoot, 'redirected'), 'junction');
 	await assert.rejects(host.readAccount('TestAccount'), /outside the selected game folder/);
-	await assert.rejects(host.readIcon('Interface/Icons/test.blp'), /outside the selected game folder/);
+	await assert.rejects(host.readIcon('Interface/Icons/redirected/test.blp'), /outside the selected game folder/);
 });
 
 test('preload exposes the matching game-folder IPC contract', async () => {
