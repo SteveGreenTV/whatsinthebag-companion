@@ -14,9 +14,15 @@ Open the [Releases page](https://github.com/SteveGreenTV/whatsinthebag-companion
 
 For macOS, open the disk image and drag the app to Applications. The app is ad-hoc signed, not Apple Developer ID signed or notarized, so Gatekeeper may block it. If you trust the download, attempt to open it, then use **System Settings > Privacy & Security > Open Anyway** to approve it. macOS builds and the WoW icon export path have not yet been verified in a real Mac client. Node.js is not required to run the downloads.
 
-Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) in Retail WoW to create snapshots. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
+Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) for your WoW game version to create snapshots. The companion can open `_retail_` and `_forever_` game folders; Forever requires the addon's Forever/Camelot build. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
-## What's New in 0.4.0
+## What's New in 0.4.1
+
+- Open either the WoW `_retail_` or `_forever_` game folder.
+- The source buttons now read **Open game folder** and **Select account** instead of R and A, with layouts that fit narrow screens.
+- Art-export guidance covers the temporary computer freeze, approximate duration, Retail/Forever data sizes and keeping only the exported icons.
+
+### Included from 0.4.0
 
 - Search saved item names in the Alts popup. Matching Bags and Bank buttons are highlighted independently; nonmatches are dimmed. All search terms must occur in the same item name, ignoring case.
 - The item filter bar spans both panes with a small blank area on its left and more space above the lists.
@@ -27,11 +33,11 @@ Snapshots remain read-only. Alts search uses saved item names only and does not 
 
 ## Use
 
-1. Start the app and select the WoW `_retail_` folder.
-2. Open the **A** menu and select an account found under `WTF/Account/<Name>/SavedVariables/WhatsInTheBag.lua`.
+1. Start the app, click **Open game folder**, and choose the WoW `_retail_` or `_forever_` folder.
+2. Click **Select account** and choose an account found under `WTF/Account/<Name>/SavedVariables/WhatsInTheBag.lua`.
 3. Use **Alts** to open a character's Bags or Bank in its own window. Search inside the Alts popup to highlight storage containing a matching saved item name and dim nonmatches. Search is case-insensitive; all whitespace-separated terms must occur in the same item name. The main window shows the Warband Bank by default when one is available.
 
-Changing accounts or selecting a different Retail folder closes open character windows. Items remain read-only; the companion cannot move or use them. Hover details contain only information captured in the snapshot, not the full live WoW tooltip.
+Changing accounts or opening a different game folder closes open character windows. Only one game folder is selected at a time. Items remain read-only; the companion cannot move or use them. Hover details contain only information captured in the snapshot, not the full live WoW tooltip.
 
 Snapshots and exported textures stay on your computer. The companion does not upload them.
 
@@ -39,7 +45,9 @@ Snapshots and exported textures stay on your computer. The companion does not up
 
 Icons are optional. Without an export, snapshots still load, but items display missing-icon placeholders.
 
-1. Close WoW. In Battle.net, select World of Warcraft and the Retail game version.
+**Art-export warning:** Exporting can take about **2 minutes**, and your computer will **freeze temporarily** while it runs. Retail handles approximately **11 GB** of art data; Forever handles approximately **10 GB**. Save other work before starting and allow the export to finish. Duration varies by computer; these are art-data sizes, not companion download sizes.
+
+1. Close WoW. In Battle.net, select World of Warcraft and the game version whose art you want to export.
 2. Open the gear menu beside **Play**, choose **Game Settings**, enable **Additional command line arguments**, and enter `-console`. Preserve any arguments already there.
 3. Launch WoW and open the developer console with the console key, usually the backtick/tilde key. The key can vary with your keyboard layout.
 4. Enter this command in the developer console, not the chat box:
@@ -48,18 +56,21 @@ Icons are optional. Without an export, snapshots still load, but items display m
 ExportInterfaceFiles art
 ```
 
-5. Allow the export to finish. It exports interface artwork, not just item icons, and can take time and substantial disk space.
+5. Allow the export to finish. It exports interface artwork, not just item icons; see the freeze and disk-space warning above.
 6. Check that your WoW installation now contains:
 
 ```text
 World of Warcraft/_retail_/BlizzardInterfaceArt/Interface/ICONS/
+World of Warcraft/_forever_/BlizzardInterfaceArt/Interface/ICONS/
 ```
 
-7. Restart the companion and select that same `_retail_` folder. You can remove `-console` from the Battle.net launch arguments afterward.
+7. Restart the companion, click **Open game folder**, and choose the same `_retail_` or `_forever_` folder containing the export. You can remove `-console` from the Battle.net launch arguments afterward.
 
-The full artwork export is roughly 11 GB (the size varies by WoW version), but the companion only needs `_retail_/BlizzardInterfaceArt/Interface/ICONS/` and its contents. You can delete the other exported files and folders inside `BlizzardInterfaceArt` to reclaim space. Keep the icons folder and its parent directory structure intact; do not delete the client's installed game files.
+Only the path for the selected game needs to exist. Of the exported art, the companion needs only `BlizzardInterfaceArt/Interface/ICONS/` and its contents at that exact location inside the selected game folder. Other exported files and folders inside `BlizzardInterfaceArt/` can be deleted to reclaim disk space if no other tool needs them. Keep `ICONS`, its parent directory structure and your `WTF/Account` snapshots intact; do not delete the client's installed game files. This cleanup applies only to exported art.
 
 Keep the exported `.blp` files in that directory structure; do not convert or copy them into the companion folder. Re-export after WoW updates if new items have missing icons. Some icons may remain unavailable if they are not present in the client export or the companion's included icon mapping.
+
+Both game-folder selections have been user-tested. The export procedure has not been independently verified in Forever or a real Mac client.
 
 ## Run from Source
 
@@ -72,7 +83,7 @@ npm ci
 npm run desktop
 ```
 
-If you already checked out the repository, open a terminal in its root folder and run only `npm ci` and `npm run desktop`. The desktop command builds the interface and starts Electron. Select your `_retail_` folder just as you would in the downloaded app; WoW snapshots and icon exports are not included in the checkout.
+If you already checked out the repository, open a terminal in its root folder and run only `npm ci` and `npm run desktop`. The desktop command builds the interface and starts Electron. Open your `_retail_` or `_forever_` game folder just as you would in the downloaded app; WoW snapshots and icon exports are not included in the checkout.
 
 For an optional browser version, run:
 
@@ -80,7 +91,7 @@ For an optional browser version, run:
 npm run dev
 ```
 
-Open the local URL printed by Vite in a Chromium-based browser. Allow folder access and popups for character windows. In an embedded VS Code/Electron browser preview, select only `_retail_/WTF/Account`; that preview can read snapshots but does not load exported icons. Stop the development server with Ctrl+C when finished.
+Open the local URL printed by Vite in a Chromium-based browser. Allow folder access and popups for character windows. In an embedded VS Code/Electron browser preview, select only `_retail_/WTF/Account` or `_forever_/WTF/Account`; that preview can read snapshots but does not load exported icons. Stop the development server with Ctrl+C when finished.
 
 ## Build a Windows EXE
 
@@ -93,7 +104,7 @@ npm run release:win:portable
 This builds a Windows x64 portable executable at:
 
 ```text
-release/WITB_Companion_0.4.0.exe
+release/WITB_Companion_0.4.1.exe
 ```
 
 The filename follows the version in `package.json`. Run the EXE directly, or copy it to another Windows x64 computer. It includes Electron and does not require Node.js on that computer. Building locally does not publish a GitHub release.

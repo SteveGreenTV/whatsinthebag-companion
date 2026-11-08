@@ -40,7 +40,7 @@ interface SnapshotHostSelection {
 }
 
 interface SnapshotHost {
-	selectRetailFolder: () => Promise<SnapshotHostSelection>;
+	selectGameFolder: () => Promise<SnapshotHostSelection>;
 	readAccount: (accountName: string) => Promise<string>;
 	readIcon: (iconPath: string) => Promise<ArrayBuffer>;
 }
@@ -80,8 +80,8 @@ const qualityColors: Record<number, string> = {
 	7: '#00ccff',
 };
 
-const retailFolderInput = document.querySelector<HTMLInputElement>('#retail-folder')!;
-const retailFolderControl = document.querySelector<HTMLLabelElement>('#retail-folder-control')!;
+const gameFolderInput = document.querySelector<HTMLInputElement>('#game-folder')!;
+const gameFolderControl = document.querySelector<HTMLLabelElement>('#game-folder-control')!;
 const accountSelect = document.querySelector<HTMLSelectElement>('#account-select')!;
 const accountToggle = document.querySelector<HTMLButtonElement>('#account-toggle')!;
 const accountList = document.querySelector<HTMLElement>('#account-list')!;
@@ -127,8 +127,8 @@ let loadedAccountName: string | null = null;
 const storageWindows = new Set<Window>();
 let artFiles = new Map<string, IconFileSource>();
 let snapshotFiles: SnapshotFile[] = [];
-let retailScanGeneration = 0;
-let nativeRetailSelection = false;
+let gameScanGeneration = 0;
+let nativeGameSelection = false;
 let nativeHasIcons = false;
 let browserIconDirectory: FileSystemDirectoryHandle | null = null;
 let useDirectoryInputFallback = false;
@@ -184,8 +184,8 @@ function getSnapshotAccountName(path: string): string | null {
 
 function prepareDirectoryInputFallback(): void {
 	useDirectoryInputFallback = true;
-	retailFolderControl.title = 'Select the WTF/Account folder inside _retail_';
-	retailFolderInput.setAttribute('aria-label', 'Select the WTF/Account folder inside the WoW Retail folder');
+	gameFolderControl.title = 'Select WTF/Account inside _retail_ or _forever_';
+	gameFolderInput.setAttribute('aria-label', 'Open game folder: select WTF/Account inside _retail_ or _forever_');
 	hideSourceProgress();
 	sourceStatus.textContent = 'Select the WTF/Account folder';
 	frameState.textContent = 'SELECT FOLDER';
@@ -270,9 +270,9 @@ function makeEmptyRail(message: string): HTMLElement {
 function renderAccountPicker(): void {
 	const options = [...accountSelect.options].filter((option) => option.value !== '');
 	accountToggle.disabled = accountSelect.disabled || options.length === 0;
-	const selectedAccount = accountSelect.selectedOptions[0]?.textContent || '';
-	accountToggle.title = selectedAccount ? `SavedVariables account · ${selectedAccount}` : 'Select SavedVariables account';
-	accountToggle.setAttribute('aria-label', accountToggle.title);
+	const selectedAccount = accountSelect.value ? accountSelect.selectedOptions[0]?.textContent : '';
+	accountToggle.title = selectedAccount ? `Select account · ${selectedAccount}` : 'Select account';
+	accountToggle.setAttribute('aria-label', 'Select account');
 	accountList.replaceChildren();
 	const heading = document.createElement('h2');
 	heading.className = 'roster-heading';
@@ -704,7 +704,7 @@ function createItemCard(item: LuaTable): HTMLElement {
 	const iconFile = iconPath.startsWith('interface/icons/') ? artFiles.get(iconPath) : undefined;
 	const isIconPath = iconPath.startsWith('interface/icons/');
 	const hasIcon = Boolean(iconFile) || (browserIconDirectory !== null && isIconPath)
-		|| (nativeRetailSelection && nativeHasIcons && isIconPath);
+		|| (nativeGameSelection && nativeHasIcons && isIconPath);
 	if (hasIcon) {
 		const image = document.createElement('img');
 		image.className = 'item-icon';
@@ -1052,9 +1052,9 @@ function syncViewOptions(): void {
 }
 
 function resetBrowser(): void {
-	retailScanGeneration += 1;
+	gameScanGeneration += 1;
 	iconObserver?.disconnect();
-	nativeRetailSelection = false;
+	nativeGameSelection = false;
 	nativeHasIcons = false;
 	browserIconDirectory = null;
 	useDirectoryInputFallback = false;
@@ -1062,35 +1062,37 @@ function resetBrowser(): void {
 	snapshotFiles = [];
 	decodedIcons.clear();
 	decodedBlps.clear();
-	retailFolderInput.value = '';
+	gameFolderInput.value = '';
+	gameFolderControl.title = 'Open game folder';
+	gameFolderInput.setAttribute('aria-label', 'Open game folder');
 	accountSelect.replaceChildren(new Option('Choose account', ''));
 	accountSelect.disabled = true;
 	sourceStatus.textContent = 'No file loaded';
 	frameState.textContent = 'OFFLINE';
-	clearSnapshotData('Select a retail folder');
+	clearSnapshotData('Open a game folder');
 }
 
-async function selectNativeRetailFolder(): Promise<void> {
+async function selectNativeGameFolder(): Promise<void> {
 	const host = window.snapshotHost;
 	if (!host) return;
-	showSourceProgress('Choose a Retail folder...');
+	showSourceProgress('Choose a game folder...');
 	try {
-		const result = await host.selectRetailFolder();
+		const result = await host.selectGameFolder();
 		if (result.canceled) {
 			hideSourceProgress();
 			return;
 		}
-		retailScanGeneration += 1;
+		gameScanGeneration += 1;
 		iconObserver?.disconnect();
 		artFiles.clear();
 		decodedIcons.clear();
 		decodedBlps.clear();
-		retailFolderInput.value = '';
-		nativeRetailSelection = true;
+		gameFolderInput.value = '';
+		nativeGameSelection = true;
 		nativeHasIcons = result.hasIcons === true;
 		browserIconDirectory = null;
 		snapshotFiles = (result.accounts || []).map((accountName) => ({ accountName }));
-		clearSnapshotData('Select an account from this retail folder');
+		clearSnapshotData('Select an account from this game folder');
 		accountSelect.replaceChildren(new Option('Choose account', ''));
 		for (const [index, snapshotFile] of snapshotFiles.entries()) {
 			accountSelect.add(new Option(snapshotFile.accountName, String(index)));
@@ -1104,11 +1106,11 @@ async function selectNativeRetailFolder(): Promise<void> {
 		frameState.textContent = nativeHasIcons ? 'ICONS READY' : 'NO ICONS';
 	} catch (error) {
 		hideSourceProgress();
-		setError(error instanceof Error ? error.message : 'Unable to select the retail folder.');
+		setError(error instanceof Error ? error.message : 'Unable to open the game folder.');
 	}
 }
 
-async function selectBrowserRetailFolder(picker: NonNullable<WindowWithDirectoryPicker['showDirectoryPicker']>): Promise<void> {
+async function selectBrowserGameFolder(picker: NonNullable<WindowWithDirectoryPicker['showDirectoryPicker']>): Promise<void> {
 	let root: FileSystemDirectoryHandle;
 	const previousStatus = sourceStatus.textContent;
 	const previousFrameState = frameState.textContent;
@@ -1128,19 +1130,19 @@ async function selectBrowserRetailFolder(picker: NonNullable<WindowWithDirectory
 	}
 
 	useDirectoryInputFallback = false;
-	retailScanGeneration += 1;
+	gameScanGeneration += 1;
 	iconObserver?.disconnect();
-	nativeRetailSelection = false;
+	nativeGameSelection = false;
 	nativeHasIcons = false;
 	browserIconDirectory = null;
 	artFiles.clear();
 	snapshotFiles = [];
 	decodedIcons.clear();
 	decodedBlps.clear();
-	retailFolderInput.value = '';
+	gameFolderInput.value = '';
 	accountSelect.replaceChildren(new Option('Choose account', ''));
 	accountSelect.disabled = true;
-	clearSnapshotData('Select an account from this retail folder');
+	clearSnapshotData('Select an account from this game folder');
 	frameState.textContent = 'SCANNING';
 	showSourceProgress('Checking WTF/Account and icon paths');
 
@@ -1178,11 +1180,11 @@ async function selectBrowserRetailFolder(picker: NonNullable<WindowWithDirectory
 		: 'No account snapshots found under WTF/Account';
 }
 
-retailFolderControl.addEventListener('click', (event) => {
+gameFolderControl.addEventListener('click', (event) => {
 	if (useDirectoryInputFallback) return;
 	if (window.snapshotHost) {
 		event.preventDefault();
-		void selectNativeRetailFolder();
+		void selectNativeGameFolder();
 		return;
 	}
 	if (/\bElectron\//i.test(navigator.userAgent)) {
@@ -1192,17 +1194,17 @@ retailFolderControl.addEventListener('click', (event) => {
 	const picker = (window as WindowWithDirectoryPicker).showDirectoryPicker;
 	if (picker) {
 		event.preventDefault();
-		void selectBrowserRetailFolder(picker.bind(window));
+		void selectBrowserGameFolder(picker.bind(window));
 	} else {
 		prepareDirectoryInputFallback();
 	}
 });
 
-retailFolderInput.addEventListener('change', async () => {
+gameFolderInput.addEventListener('change', async () => {
 	useDirectoryInputFallback = false;
-	const scanGeneration = ++retailScanGeneration;
+	const scanGeneration = ++gameScanGeneration;
 	iconObserver?.disconnect();
-	nativeRetailSelection = false;
+	nativeGameSelection = false;
 	nativeHasIcons = false;
 	browserIconDirectory = null;
 	artFiles.clear();
@@ -1211,11 +1213,11 @@ retailFolderInput.addEventListener('change', async () => {
 	decodedBlps.clear();
 	accountSelect.replaceChildren(new Option('Choose account', ''));
 	accountSelect.disabled = true;
-	clearSnapshotData('Select an account from this retail folder');
-	const files = retailFolderInput.files;
+	clearSnapshotData('Select an account from this game folder');
+	const files = gameFolderInput.files;
 	if (!files?.length) {
 		hideSourceProgress();
-		sourceStatus.textContent = 'No retail files found';
+		sourceStatus.textContent = 'No account files found';
 		frameState.textContent = 'NO FILES';
 		return;
 	}
@@ -1223,7 +1225,7 @@ retailFolderInput.addEventListener('change', async () => {
 	const chunkSize = 800;
 	showSourceProgress(`Scanning 0% · 0 of ${files.length.toLocaleString()} files`, 0);
 	for (let start = 0; start < files.length; start += chunkSize) {
-		if (scanGeneration !== retailScanGeneration) return;
+		if (scanGeneration !== gameScanGeneration) return;
 		const end = Math.min(start + chunkSize, files.length);
 		for (let index = start; index < end; index += 1) {
 			const file = files[index];
@@ -1237,7 +1239,7 @@ retailFolderInput.addEventListener('change', async () => {
 			await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 		}
 	}
-	if (scanGeneration !== retailScanGeneration) return;
+	if (scanGeneration !== gameScanGeneration) return;
 	snapshotFiles.sort((left, right) => left.accountName.localeCompare(right.accountName, undefined, { sensitivity: 'base' }));
 	for (const [index, snapshotFile] of snapshotFiles.entries()) {
 		accountSelect.add(new Option(snapshotFile.accountName, String(index)));
@@ -1255,7 +1257,7 @@ accountSelect.addEventListener('change', async () => {
 	closeStorageWindows();
 	renderAccountPicker();
 	if (!accountSelect.value) {
-		clearSnapshotData('Select an account from this retail folder');
+		clearSnapshotData('Select an account from this game folder');
 		sourceStatus.textContent = snapshotFiles.length ? `${snapshotFiles.length} account snapshots found` : 'No account snapshots found';
 		frameState.textContent = artFiles.size || browserIconDirectory ? 'ICONS READY' : 'NO ICONS';
 		return;
@@ -1346,7 +1348,7 @@ async function initializeRequestedWindow(): Promise<void> {
 		try {
 			frameState.textContent = 'LOADING';
 			const savedVariables = await window.snapshotHost.readAccount(requestedAccountName);
-			nativeRetailSelection = true;
+			nativeGameSelection = true;
 			nativeHasIcons = windowParameters.get('icons') === 'true';
 			setLoadedAccount(parseSavedVariables(savedVariables), requestedSelection, requestedAccountName);
 			sourceStatus.textContent = 'Snapshots loaded';

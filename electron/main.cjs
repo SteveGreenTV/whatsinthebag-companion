@@ -15,12 +15,12 @@ const contentTypes = new Map([
 
 let server;
 let appUrl;
-const retailSelections = new Map();
+const gameSelections = new Map();
 
-function getRetailSelection(event) {
+function getGameSelection(event) {
 	if (!event.senderFrame?.url.startsWith(appUrl)) throw new Error('Untrusted viewer request.');
-	const selection = retailSelections.get(event.sender.id);
-	if (!selection) throw new Error('Select a retail folder first.');
+	const selection = gameSelections.get(event.sender.id);
+	if (!selection) throw new Error('Open a game folder first.');
 	return selection;
 }
 
@@ -28,44 +28,44 @@ async function resolveWithin(root, target) {
 	const [resolvedRoot, resolvedTarget] = await Promise.all([realpath(root), realpath(target)]);
 	const relative = path.relative(resolvedRoot, resolvedTarget);
 	if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-		throw new Error('Requested file is outside the selected retail folder.');
+		throw new Error('Requested file is outside the selected game folder.');
 	}
 	return resolvedTarget;
 }
 
-ipcMain.handle('snapshot:select-retail-folder', async (event) => {
+ipcMain.handle('snapshot:select-game-folder', async (event) => {
 	const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
-		title: 'Select the WoW _retail_ folder',
-		buttonLabel: 'Select folder',
+		title: 'Open the WoW _retail_ or _forever_ game folder',
+		buttonLabel: 'Open game folder',
 		properties: ['openDirectory'],
 	});
 	if (result.canceled || !result.filePaths[0]) return { canceled: true };
 
-	const retailRoot = path.resolve(result.filePaths[0]);
-	if (path.basename(retailRoot).toLowerCase() !== '_retail_') {
-		throw new Error('Select the _retail_ folder inside your World of Warcraft installation.');
+	const gameRoot = path.resolve(result.filePaths[0]);
+	if (!['_retail_', '_forever_'].includes(path.basename(gameRoot).toLowerCase())) {
+		throw new Error('Open the _retail_ or _forever_ folder inside your World of Warcraft installation.');
 	}
 
 	let iconsRoot = null;
-	const candidateIconsRoot = path.join(retailRoot, 'BlizzardInterfaceArt', 'Interface', 'ICONS');
+	const candidateIconsRoot = path.join(gameRoot, 'BlizzardInterfaceArt', 'Interface', 'ICONS');
 	try {
-		if ((await lstat(candidateIconsRoot)).isDirectory()) iconsRoot = await resolveWithin(retailRoot, candidateIconsRoot);
+		if ((await lstat(candidateIconsRoot)).isDirectory()) iconsRoot = await resolveWithin(gameRoot, candidateIconsRoot);
 	} catch {}
 
 	const accounts = new Map();
-	const accountsRoot = path.join(retailRoot, 'WTF', 'Account');
+	const accountsRoot = path.join(gameRoot, 'WTF', 'Account');
 	const accountDirectories = await readdir(accountsRoot, { withFileTypes: true }).catch(() => []);
 	for (const accountDirectory of accountDirectories) {
 		if (!accountDirectory.isDirectory()) continue;
 		const snapshotPath = path.join(accountsRoot, accountDirectory.name, 'SavedVariables', 'WhatsInTheBag.lua');
 		try {
 			if (!(await lstat(snapshotPath)).isFile()) continue;
-			await resolveWithin(retailRoot, snapshotPath);
+			await resolveWithin(gameRoot, snapshotPath);
 			accounts.set(accountDirectory.name, snapshotPath);
 		} catch {}
 	}
 
-	retailSelections.set(event.sender.id, { retailRoot, iconsRoot, accounts });
+	gameSelections.set(event.sender.id, { gameRoot, iconsRoot, accounts });
 	return {
 		canceled: false,
 		hasIcons: iconsRoot !== null,
@@ -75,18 +75,18 @@ ipcMain.handle('snapshot:select-retail-folder', async (event) => {
 
 ipcMain.handle('snapshot:read-account', async (event, accountName) => {
 	if (typeof accountName !== 'string') throw new Error('Invalid account selection.');
-	const selection = getRetailSelection(event);
+	const selection = getGameSelection(event);
 	const snapshotPath = selection.accounts.get(accountName);
 	if (!snapshotPath) throw new Error('The selected account snapshot was not found.');
-	const safePath = await resolveWithin(selection.retailRoot, snapshotPath);
+	const safePath = await resolveWithin(selection.gameRoot, snapshotPath);
 	if (!(await lstat(safePath)).isFile()) throw new Error('The account snapshot is not a file.');
 	return readFile(safePath, 'utf8');
 });
 
 ipcMain.handle('snapshot:read-icon', async (event, iconPath) => {
 	if (typeof iconPath !== 'string' || iconPath.length > 1024) throw new Error('Invalid icon path.');
-	const selection = getRetailSelection(event);
-	if (!selection.iconsRoot) throw new Error('The selected retail folder has no exported icon directory.');
+	const selection = getGameSelection(event);
+	if (!selection.iconsRoot) throw new Error('The selected game folder has no exported icon directory.');
 	const normalizedPath = iconPath.replaceAll('\\', '/');
 	const segments = normalizedPath.split('/');
 	if (segments.length < 3 || segments[0].toLowerCase() !== 'interface'
@@ -182,7 +182,7 @@ function windowOptions() {
 }
 
 function configureWindow(window) {
-	window.webContents.once('destroyed', () => retailSelections.delete(window.webContents.id));
+	window.webContents.once('destroyed', () => gameSelections.delete(window.webContents.id));
 	window.webContents.setWindowOpenHandler(({ url }) => isViewerUrl(url)
 		? { action: 'allow', overrideBrowserWindowOptions: windowOptions() }
 		: { action: 'deny' });
@@ -191,8 +191,8 @@ function configureWindow(window) {
 			childWindow.close();
 			return;
 		}
-		const selection = retailSelections.get(window.webContents.id);
-		if (selection) retailSelections.set(childWindow.webContents.id, selection);
+		const selection = gameSelections.get(window.webContents.id);
+		if (selection) gameSelections.set(childWindow.webContents.id, selection);
 		configureWindow(childWindow);
 	});
 	window.webContents.on('will-navigate', (event, target) => {
