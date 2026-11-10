@@ -12,6 +12,56 @@ export function snapshotMatchesNameSearch(snapshot: LuaValue | undefined, query:
 			&& terms.every((term) => (item.name as string).toLowerCase().includes(term))));
 }
 
+export interface ItemCountByCharacter {
+	name: string;
+	realm: string;
+	count: number;
+}
+
+export interface SnapshotItemCounts {
+	characters: ItemCountByCharacter[];
+	warbandCount: number;
+	total: number;
+}
+
+function countItemInSnapshot(snapshot: LuaValue | undefined, itemID: number): number {
+	if (!isLuaTable(snapshot)) return 0;
+	let total = 0;
+	for (const bagValue of tableValues(snapshot.bags)) {
+		if (!isLuaTable(bagValue)) continue;
+		for (const itemValue of tableValues(bagValue.items)) {
+			if (isLuaTable(itemValue) && itemValue.itemID === itemID) {
+				total += typeof itemValue.count === 'number' ? itemValue.count : 1;
+			}
+		}
+	}
+	return total;
+}
+
+export function getSnapshotItemCounts(account: LuaTable, itemID: number): SnapshotItemCounts {
+	const charactersTable = account.characterSnapshots;
+	const characters: ItemCountByCharacter[] = [];
+	let total = 0;
+	if (isLuaTable(charactersTable)) {
+		for (const [key, characterValue] of Object.entries(charactersTable)) {
+			if (!isLuaTable(characterValue)) continue;
+			const count = countItemInSnapshot(characterValue.bags, itemID)
+				+ countItemInSnapshot(characterValue.characterBank, itemID);
+			if (count <= 0) continue;
+			characters.push({
+				name: typeof characterValue.name === 'string' ? characterValue.name : key,
+				realm: typeof characterValue.realm === 'string' ? characterValue.realm : '',
+				count,
+			});
+			total += count;
+		}
+	}
+	characters.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+		|| left.realm.localeCompare(right.realm, undefined, { sensitivity: 'base' }));
+	const warbandCount = countItemInSnapshot(account.warbandSnapshot, itemID);
+	return { characters, warbandCount, total: total + warbandCount };
+}
+
 type TokenKind = 'identifier' | 'number' | 'string' | 'punctuation' | 'eof';
 
 interface Token {

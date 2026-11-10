@@ -1,7 +1,7 @@
 import initBlp, { blpToPng } from 'wow-blp-web';
 import blpWasmUrl from 'wow-blp-web/wow_blp_web_bg.wasm?url';
 import iconManifest from './icon-paths.json';
-import { isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
+import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
 
 type StorageKey = 'bags' | 'characterBank' | 'warband';
 
@@ -80,6 +80,15 @@ const qualityColors: Record<number, string> = {
 	7: '#00ccff',
 };
 
+const upgradeTrackNames: Record<string, string> = {
+	E: 'Explorer',
+	A: 'Adventurer',
+	V: 'Veteran',
+	C: 'Champion',
+	H: 'Hero',
+	M: 'Myth',
+};
+
 const gameFolderInput = document.querySelector<HTMLInputElement>('#game-folder')!;
 const gameFolderControl = document.querySelector<HTMLLabelElement>('#game-folder-control')!;
 const accountSelect = document.querySelector<HTMLSelectElement>('#account-select')!;
@@ -97,6 +106,9 @@ rosterSearchInput.setAttribute('aria-label', 'Search items across alt bags and b
 rosterSearchInput.addEventListener('input', updateRosterSearch);
 const characterToggle = document.querySelector<HTMLButtonElement>('#character-toggle')!;
 const characterSelectionLabel = document.querySelector<HTMLElement>('#character-selection-label')!;
+const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
+const settingsMenu = document.querySelector<HTMLElement>('#settings-menu')!;
+const tooltipCategoryToggle = document.querySelector<HTMLInputElement>('#tooltip-category-toggle')!;
 const categoryList = document.querySelector<HTMLElement>('#category-list')!;
 const categoryTotal = document.querySelector<HTMLElement>('#category-total')!;
 const toggleAllCategories = document.querySelector<HTMLButtonElement>('#toggle-all-categories')!;
@@ -145,11 +157,22 @@ let selection: Selection = requestedSelection || { characterKey: null, storage: 
 let hiddenCategories = new Set<string>();
 let activeCategory: string | null = null;
 let viewOptions = { category: true, subcategory: true, itemNames: true };
+let showTooltipCategoryDetails = readTooltipCategoryPreference();
 let wasmReady: Promise<unknown> | undefined;
 const decodedIcons = new Map<string, string>();
 const decodedBlps = new Map<string, Promise<Uint8Array>>();
 const pendingIconLoads = new WeakMap<HTMLImageElement, { iconPath: string; file?: IconFileSource; frame: HTMLElement }>();
 let iconObserver: IntersectionObserver | null = null;
+
+function readTooltipCategoryPreference(): boolean {
+	try {
+		return window.localStorage.getItem('witbCompanion.showTooltipCategoryDetails') === 'true';
+	} catch {
+		return false;
+	}
+}
+
+tooltipCategoryToggle.checked = showTooltipCategoryDetails;
 
 function valueTable(value: LuaValue | undefined): LuaTable | null {
 	return isLuaTable(value) ? value : null;
@@ -326,8 +349,10 @@ function closeMenus(): void {
 	closeCharacterMenu();
 	filterMenu.hidden = true;
 	viewMenu.hidden = true;
+	settingsMenu.hidden = true;
 	filterToggle.setAttribute('aria-expanded', 'false');
 	viewToggle.setAttribute('aria-expanded', 'false');
+	settingsToggle.setAttribute('aria-expanded', 'false');
 }
 
 function resetSnapshotFilters(): void {
@@ -640,39 +665,77 @@ function showItemTooltip(card: HTMLElement, item: LuaTable): void {
 	name.style.color = qualityColor;
 	itemTooltip.append(name);
 
-	const classification = [stringValue(item.category), stringValue(item.itemSubtype)].filter(Boolean).join(' · ');
-	if (classification) {
+	const itemLevel = numberValue(item.itemLevel);
+	if (itemLevel !== null && itemLevel > 0) {
 		const line = document.createElement('div');
-		line.className = 'snapshot-item-tooltip-classification';
-		line.textContent = classification;
+		line.className = 'snapshot-item-tooltip-item-level';
+		line.textContent = `Item Level ${itemLevel}`;
 		itemTooltip.append(line);
 	}
-
-	const details: string[] = [];
-	const itemLevel = numberValue(item.itemLevel);
-	const count = numberValue(item.count);
-	if (itemLevel !== null && itemLevel > 0) details.push(`Item level ${itemLevel}`);
-	if (count !== null && count > 1) details.push(`Stack ${count}`);
 	const upgrade = valueTable(item.upgradeInfo);
 	if (upgrade) {
-		const track = [...stringValue(upgrade.trackString).trim()][0]?.toLocaleUpperCase();
+		const trackValue = stringValue(upgrade.trackString).trim();
+		const track = upgradeTrackNames[trackValue.toLocaleUpperCase()] || trackValue;
 		const current = numberValue(upgrade.currentLevel);
 		const maximum = numberValue(upgrade.maxLevel);
-		if (track && current !== null && current > 0 && maximum !== null && maximum > 0) {
-			details.push(`Upgrade ${track}${current}/${maximum}`);
+		if (track && current !== null && maximum !== null && current > 0 && maximum > 0) {
+			const line = document.createElement('div');
+			line.className = 'snapshot-item-tooltip-upgrade';
+			line.textContent = `Upgrade Level: ${track} ${current}/${maximum}`;
+			itemTooltip.append(line);
 		}
 	}
-	for (const [field, label] of [
-		['soulbound', 'Soulbound'], ['warbound', 'Warbound'], ['upgradeable', 'Upgradeable'],
-		['openable', 'Openable'], ['usable', 'Usable'],
-	] as const) {
-		if (item[field] === true) details.push(label);
-	}
-	for (const detail of details) {
+	if (item.warbound === true || item.soulbound === true) {
 		const line = document.createElement('div');
-		line.className = 'snapshot-item-tooltip-detail';
-		line.textContent = detail;
+		line.className = item.warbound === true
+			? 'snapshot-item-tooltip-binding warbound'
+			: 'snapshot-item-tooltip-binding soulbound';
+		line.textContent = item.warbound === true ? 'Warbound until equipped' : 'Soulbound';
 		itemTooltip.append(line);
+	}
+	const itemID = numberValue(item.itemID);
+	if (account && itemID !== null) {
+		const counts = getSnapshotItemCounts(account, itemID);
+		if (counts.total > 0) {
+			const countSection = document.createElement('div');
+			countSection.className = 'snapshot-item-tooltip-counts';
+			const appendCount = (label: string, value: number, kind = 'character'): void => {
+				const row = document.createElement('div');
+				row.className = `snapshot-item-tooltip-count ${kind}`;
+				const name = document.createElement('span');
+				name.textContent = label;
+				const amount = document.createElement('span');
+				amount.textContent = String(value);
+				row.append(name, amount);
+				countSection.append(row);
+			};
+			for (const character of counts.characters) {
+				const name = character.realm ? `${character.name} - ${character.realm}` : character.name;
+				appendCount(name, character.count);
+			}
+			if (counts.warbandCount > 0) appendCount('Warband', counts.warbandCount, 'warband');
+			appendCount('Overall total', counts.total, 'total');
+			itemTooltip.append(countSection);
+		}
+	}
+	const category = stringValue(item.category);
+	const subcategory = stringValue(item.itemSubtype);
+	if (showTooltipCategoryDetails && (category || subcategory)) {
+		const categorySection = document.createElement('div');
+		categorySection.className = 'snapshot-item-tooltip-classifications';
+		const appendClassification = (label: string, value: string): void => {
+			const row = document.createElement('div');
+			row.className = 'snapshot-item-tooltip-classification';
+			const field = document.createElement('span');
+			field.textContent = label;
+			const text = document.createElement('span');
+			text.textContent = value;
+			row.append(field, text);
+			categorySection.append(row);
+		};
+		if (category) appendClassification('Category', category);
+		if (subcategory) appendClassification('Subcategory', subcategory);
+		itemTooltip.append(categorySection);
 	}
 
 	itemTooltip.hidden = false;
@@ -1311,6 +1374,20 @@ viewToggle.addEventListener('click', () => {
 	viewMenu.hidden = !open;
 	viewToggle.setAttribute('aria-expanded', String(open));
 });
+settingsToggle.addEventListener('click', () => {
+	const open = settingsMenu.hidden;
+	closeMenus();
+	settingsMenu.hidden = !open;
+	settingsToggle.setAttribute('aria-expanded', String(open));
+});
+tooltipCategoryToggle.addEventListener('change', () => {
+	showTooltipCategoryDetails = tooltipCategoryToggle.checked;
+	try {
+		window.localStorage.setItem('witbCompanion.showTooltipCategoryDetails', String(showTooltipCategoryDetails));
+	} catch {
+		return;
+	}
+});
 filterMenu.addEventListener('change', handleQuickFilterChange);
 filterClear.addEventListener('click', () => {
 	for (const input of filterMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = false;
@@ -1338,6 +1415,10 @@ document.addEventListener('pointerdown', (event) => {
 	if (!viewToggle.contains(target) && !viewMenu.contains(target)) {
 		viewMenu.hidden = true;
 		viewToggle.setAttribute('aria-expanded', 'false');
+	}
+	if (!settingsToggle.contains(target) && !settingsMenu.contains(target)) {
+		settingsMenu.hidden = true;
+		settingsToggle.setAttribute('aria-expanded', 'false');
 	}
 });
 document.querySelector('.close-button')?.addEventListener('click', resetBrowser);

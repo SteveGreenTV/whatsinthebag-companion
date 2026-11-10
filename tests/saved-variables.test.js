@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues } from '../src/saved-variables.ts';
+import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues } from '../src/saved-variables.ts';
 
 test('alt search matches literal case-insensitive terms in one saved item name', () => {
 	const bags = { bags: { 1: { items: {
@@ -20,6 +20,33 @@ test('alt search matches literal case-insensitive terms in one saved item name',
 	assert.equal(snapshotMatchesNameSearch(bags, '  '), false);
 	assert.equal(snapshotMatchesNameSearch(undefined, 'potion'), false);
 	assert.equal(snapshotMatchesNameSearch({ bags: {} }, 'potion'), false);
+});
+
+test('counts item stacks across each character and the Warband Bank', () => {
+	const account = {
+		characterSnapshots: {
+			'Player-1': {
+				name: 'Ada', realm: 'Area 52',
+				bags: { bags: { 1: { items: { 1: { itemID: 42, count: 3 }, 2: { itemID: 42 } } } } },
+				characterBank: { bags: { 2: { items: { 1: { itemID: 42, count: 2 } } } } },
+			},
+			'Player-2': {
+				name: 'Bex', realm: 'Dalaran',
+				characterBank: { bags: { 3: { items: { 1: { itemID: 42, count: 4 } } } } },
+			},
+		},
+		warbandSnapshot: { bags: { 4: { items: { 1: { itemID: 42, count: 2 }, 2: { itemID: 7, count: 9 } } } } },
+	};
+
+	assert.deepEqual(getSnapshotItemCounts(account, 42), {
+		characters: [
+			{ name: 'Ada', realm: 'Area 52', count: 6 },
+			{ name: 'Bex', realm: 'Dalaran', count: 4 },
+		],
+		warbandCount: 2,
+		total: 12,
+	});
+	assert.deepEqual(getSnapshotItemCounts(account, 99), { characters: [], warbandCount: 0, total: 0 });
 });
 
 test('parses character and shared bank snapshots with escaped strings', () => {

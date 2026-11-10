@@ -16,6 +16,12 @@ For macOS, open the disk image and drag the app to Applications. The app is ad-h
 
 Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) for your WoW game version to create snapshots. The companion can open `_retail_` and `_forever_` game folders; Forever requires the addon's Forever/Camelot build. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
+## What's New in 0.5.0
+
+- Item tooltips show saved item level, full upgrade-track name and bound status, with counts across character Bags, Character Banks and the Warband Bank.
+- Use the gear menu beside **Alts** to toggle Category and Subcategory details in tooltips. This companion-only setting is off by default and saved locally.
+- Tooltip category details appear below the item counts.
+
 ## What's New in 0.4.2
 
 - Keep the category rail at a consistent 220px width across window sizes.
@@ -108,7 +114,7 @@ npm run release:win:portable
 This builds a Windows x64 portable executable at:
 
 ```text
-release/WITB_Companion_0.4.1.exe
+release/WITB_Companion_0.5.0.exe
 ```
 
 The filename follows the version in `package.json`. Run the EXE directly, or copy it to another Windows x64 computer. It includes Electron and does not require Node.js on that computer. Building locally does not publish a GitHub release.

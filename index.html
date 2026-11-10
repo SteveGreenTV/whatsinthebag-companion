@@ -42,6 +42,15 @@
 					<button class="character-toggle" id="character-toggle" type="button" aria-label="Choose character and storage" title="Choose character and storage" aria-expanded="false" aria-controls="character-list" disabled>
 						<span>Alts</span><span aria-hidden="true">▾</span><span id="character-selection-label" class="visually-hidden">Choose character</span>
 					</button>
+					<div class="settings-picker">
+						<button class="settings-toggle" id="settings-toggle" type="button" aria-label="Companion settings" title="Companion settings" aria-expanded="false" aria-controls="settings-menu">
+							<span aria-hidden="true">⚙</span>
+						</button>
+						<div class="filter-menu settings-menu" id="settings-menu" role="dialog" aria-label="Companion settings" hidden>
+							<p class="menu-heading">COMPANION SETTINGS</p>
+							<label><input id="tooltip-category-toggle" type="checkbox" /> Category details in tooltips</label>
+						</div>
+					</div>
 					<div class="character-menu" id="character-list" role="dialog" aria-label="Alts" hidden>
 						<div class="rail-empty"><span class="empty-rune" aria-hidden="true">◇</span><span>Select a snapshot file</span></div>
 					</div>
