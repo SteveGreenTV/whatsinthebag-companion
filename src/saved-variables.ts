@@ -3,6 +3,16 @@ export interface LuaTable {
 }
 export type LuaValue = LuaTable | string | number | boolean | null;
 
+export function snapshotItemMatchesStatus(item: LuaTable, status: string): boolean {
+	if (item[status] !== false) return true;
+	if (status !== 'upgradeable' || !isLuaTable(item.upgradeInfo)) return false;
+	const current = item.upgradeInfo.currentLevel;
+	const maximum = item.upgradeInfo.maxLevel;
+	return typeof current === 'number' && Number.isFinite(current)
+		&& typeof maximum === 'number' && Number.isFinite(maximum)
+		&& maximum > 0 && current >= maximum;
+}
+
 export function snapshotMatchesNameSearch(snapshot: LuaValue | undefined, query: string): boolean {
 	const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
 	if (!terms.length || !isLuaTable(snapshot)) return false;

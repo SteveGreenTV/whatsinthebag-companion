@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues } from '../src/saved-variables.ts';
+import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotItemMatchesStatus, snapshotMatchesNameSearch, tableValues } from '../src/saved-variables.ts';
 
 test('alt search matches literal case-insensitive terms in one saved item name', () => {
 	const bags = { bags: { 1: { items: {
@@ -20,6 +20,20 @@ test('alt search matches literal case-insensitive terms in one saved item name',
 	assert.equal(snapshotMatchesNameSearch(bags, '  '), false);
 	assert.equal(snapshotMatchesNameSearch(undefined, 'potion'), false);
 	assert.equal(snapshotMatchesNameSearch({ bags: {} }, 'potion'), false);
+});
+
+test('upgradeable status also matches fully upgraded snapshot items', () => {
+	assert.equal(snapshotItemMatchesStatus({ upgradeable: true }, 'upgradeable'), true);
+	assert.equal(snapshotItemMatchesStatus({
+		upgradeable: false,
+		upgradeInfo: { trackString: 'Champion', currentLevel: 6, maxLevel: 6 },
+	}, 'upgradeable'), true);
+	assert.equal(snapshotItemMatchesStatus({
+		upgradeable: false,
+		upgradeInfo: { trackString: 'Champion', currentLevel: 5, maxLevel: 6 },
+	}, 'upgradeable'), false);
+	assert.equal(snapshotItemMatchesStatus({ upgradeable: false }, 'upgradeable'), false);
+	assert.equal(snapshotItemMatchesStatus({}, 'upgradeable'), true);
 });
 
 test('counts item stacks across each character and the Warband Bank', () => {

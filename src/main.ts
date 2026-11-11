@@ -1,7 +1,7 @@
 import initBlp, { blpToPng } from 'wow-blp-web';
 import blpWasmUrl from 'wow-blp-web/wow_blp_web_bg.wasm?url';
 import iconManifest from './icon-paths.json';
-import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
+import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotItemMatchesStatus, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
 
 type StorageKey = 'bags' | 'characterBank' | 'warband';
 
@@ -629,7 +629,7 @@ function itemMatchesSearch(item: LuaTable, terms: SearchTerm[]): boolean {
 			if (subClassID !== null && armorAliases[value] === undefined && item.itemSubtype !== undefined && !includes(item.itemSubtype, value)) return false;
 		} else if (field === 'status') {
 			if (item.statusUnavailable === true && ['soulbound', 'warbound', 'upgradeable'].includes(value)) return false;
-			if (item[value] === false) return false;
+			if (!snapshotItemMatchesStatus(item, value)) return false;
 		} else {
 			const searchable = [item.name, item.category, item.itemSubtype, item.itemLevel, item.equipLoc]
 				.map((part) => String(part ?? '').toLocaleLowerCase()).join(' ');
