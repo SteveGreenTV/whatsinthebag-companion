@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotItemMatchesStatus, snapshotMatchesNameSearch, tableValues } from '../src/saved-variables.ts';
+import {
+	getSnapshotEquipmentSlots,
+	getSnapshotItemCounts,
+	groupSnapshotItemsBySubcategory,
+	isLuaTable,
+	isSnapshotEquipmentItem,
+	parseSavedVariables,
+	snapshotCharacterMatchesNameSearch,
+	snapshotItemMatchesStatus,
+	snapshotMatchesNameSearch,
+	sortSnapshotItems,
+	tableValues,
+} from '../src/saved-variables.ts';
 
 test('alt search matches literal case-insensitive terms in one saved item name', () => {
 	const bags = { bags: { 1: { items: {
@@ -34,6 +46,57 @@ test('upgradeable status also matches fully upgraded snapshot items', () => {
 	}, 'upgradeable'), false);
 	assert.equal(snapshotItemMatchesStatus({ upgradeable: false }, 'upgradeable'), false);
 	assert.equal(snapshotItemMatchesStatus({}, 'upgradeable'), true);
+	assert.equal(snapshotItemMatchesStatus({
+		upgradeable: true,
+		upgradeInfo: { trackString: 'Champion', currentLevel: 0, maxLevel: 0 },
+	}, 'upgradeable'), false);
+});
+
+test('equipment filters and item-level sorting follow addon precedence only when enabled', () => {
+	const items = [
+		{ name: 'Chest', equipLoc: 'INVTYPE_CHEST', itemLevel: 300 },
+		{ name: 'Zulu Head', equipLoc: 'INVTYPE_HEAD', itemLevel: 100 },
+		{ name: 'Unknown Head', equipLoc: 'INVTYPE_HEAD' },
+		{ name: 'Alpha Head', equipLoc: 'INVTYPE_HEAD', itemLevel: 200 },
+		{ name: 'Potion', equipLoc: '' },
+	];
+	assert.equal(isSnapshotEquipmentItem(items[0]), true);
+	assert.equal(isSnapshotEquipmentItem(items[4]), false);
+	assert.deepEqual(getSnapshotEquipmentSlots({ equipLoc: 'INVTYPE_WEAPON' }).map((slot) => slot.name), ['Main Hand', 'Off Hand']);
+	assert.deepEqual(
+		sortSnapshotItems(items, { equipment: false, sortByItemLevel: false }).map((item) => item.name),
+		['Alpha Head', 'Chest', 'Potion', 'Unknown Head', 'Zulu Head'],
+	);
+	assert.deepEqual(
+		sortSnapshotItems(items, { equipment: false, sortByItemLevel: true }).map((item) => item.name),
+		['Chest', 'Alpha Head', 'Zulu Head', 'Potion', 'Unknown Head'],
+	);
+	assert.deepEqual(
+		sortSnapshotItems(items, { equipment: true, sortByItemLevel: true }).map((item) => item.name),
+		['Alpha Head', 'Zulu Head', 'Unknown Head', 'Chest', 'Potion'],
+	);
+});
+
+test('subcategory grouping merges across categories and keeps unresolved metadata last', () => {
+	const items = [
+		{ category: 'Armor', itemSubtype: 'Cloth', name: 'Zulu' },
+		{ category: 'Weapon', itemSubtype: 'Cloth', name: 'Alpha' },
+		{ category: 'Armor', itemSubtype: 'Leather', name: 'Hide' },
+		{ category: 'Other', name: 'Unresolved' },
+	];
+	const groups = groupSnapshotItemsBySubcategory(items);
+	assert.deepEqual(groups.map(([subcategory]) => subcategory), ['Cloth', 'Leather', '']);
+	assert.deepEqual(sortSnapshotItems(groups[0][1], { equipment: false, sortByItemLevel: false }).map((item) => item.name), ['Alpha', 'Zulu']);
+});
+
+test('Alt character search matches either storage without combining terms across items', () => {
+	const character = {
+		bags: { bags: { 1: { items: { 1: { name: 'Greater Healing Potion' } } } } },
+		characterBank: { bags: { 2: { items: { 1: { name: 'Greater Mana Potion' } } } } },
+	};
+	assert.equal(snapshotCharacterMatchesNameSearch(character, 'mana potion'), true);
+	assert.equal(snapshotCharacterMatchesNameSearch(character, 'healing mana'), false);
+	assert.equal(snapshotCharacterMatchesNameSearch(character, '  '), false);
 });
 
 test('counts item stacks across each character and the Warband Bank', () => {

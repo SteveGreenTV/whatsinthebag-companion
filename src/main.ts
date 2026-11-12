@@ -1,7 +1,20 @@
 import initBlp, { blpToPng } from 'wow-blp-web';
 import blpWasmUrl from 'wow-blp-web/wow_blp_web_bg.wasm?url';
 import iconManifest from './icon-paths.json';
-import { getSnapshotItemCounts, isLuaTable, parseSavedVariables, snapshotItemMatchesStatus, snapshotMatchesNameSearch, tableValues, type LuaTable, type LuaValue } from './saved-variables';
+import {
+	compareSnapshotItems,
+	getSnapshotEquipmentSlots,
+	getSnapshotItemCounts,
+	groupSnapshotItemsBySubcategory,
+	isLuaTable,
+	parseSavedVariables,
+	snapshotCharacterMatchesNameSearch,
+	snapshotItemMatchesStatus,
+	snapshotMatchesNameSearch,
+	tableValues,
+	type LuaTable,
+	type LuaValue,
+} from './saved-variables';
 
 type StorageKey = 'bags' | 'characterBank' | 'warband';
 
