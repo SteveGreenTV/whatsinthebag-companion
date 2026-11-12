@@ -118,6 +118,8 @@ npm run dev
 
 Open the local URL printed by Vite in a Chromium-based browser. Allow folder access and popups for character windows. In an embedded VS Code/Electron browser preview, select only `_retail_/WTF/Account` or `_forever_/WTF/Account`; that preview can read snapshots but does not load exported icons. Stop the development server with Ctrl+C when finished.
 
+The UI entry point is `src/main.ts`. Roster controls, item rendering and icon loading, and item search live in `src/roster.ts`, `src/item-renderer.ts`, and `src/item-search.ts`. Snapshot helpers are in `src/saved-variables.ts`; the restricted SavedVariables parser is in `src/lua-parser.ts`.
+
 ## Build a Windows EXE
 
 After `npm ci`, run this in the repository root on Windows:
