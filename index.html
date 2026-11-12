@@ -70,6 +70,7 @@
 								<div class="search-example"><code>potion healing</code><span>Match both words in searchable item text.</span></div>
 								<div class="search-example"><code>slot:chest armor:plate</code><span>Match chest-slot plate armor; robes count as chest.</span></div>
 								<div class="search-example"><code>legs leather</code><span>Match leather leg armor.</span></div>
+								<div class="search-example"><code>equipment</code><span>Match saved items with an equipment slot.</span></div>
 								<div class="search-example"><code>type:sword</code><span>Match one- or two-handed swords.</span></div>
 								<div class="search-example"><code>category:armor</code><span>Match items in the Armor category.</span></div>
 								<div class="search-example"><code>soulbound upgradeable</code><span>Match soulbound items that can still be upgraded or have a fully upgraded track.</span></div>
@@ -95,6 +96,9 @@
 								<label><input type="checkbox" value="armor:leather" /> Leather armor</label>
 								<label><input type="checkbox" value="armor:mail" /> Mail armor</label>
 								<label><input type="checkbox" value="armor:plate" /> Plate armor</label>
+								<hr />
+								<p class="menu-subheading">EQUIPMENT</p>
+								<label><input type="checkbox" value="equipment" /> Equipment</label>
 							</div>
 						</div>
 					</div>
@@ -110,6 +114,8 @@
 							<label><input type="checkbox" value="category" checked /> Category</label>
 							<label><input type="checkbox" value="subcategory" checked /> Subcategory</label>
 							<label><input type="checkbox" value="itemNames" checked /> Item names</label>
+							<hr />
+							<label><input type="checkbox" value="sortByItemLevel" /> Sort by item level</label>
 						</div>
 					</div>
 					<div class="category-list-heading">

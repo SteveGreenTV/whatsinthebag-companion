@@ -169,7 +169,7 @@ if (requestedSelection) appFrame.classList.add('storage-window');
 let selection: Selection = requestedSelection || { characterKey: null, storage: 'warband' };
 let hiddenCategories = new Set<string>();
 let activeCategory: string | null = null;
-let viewOptions = { category: true, subcategory: true, itemNames: true };
+let viewOptions = { category: true, subcategory: true, itemNames: true, sortByItemLevel: false };
 let showTooltipCategoryDetails = readTooltipCategoryPreference();
 let wasmReady: Promise<unknown> | undefined;
 const decodedIcons = new Map<string, string>();
@@ -370,8 +370,10 @@ function closeMenus(): void {
 
 function resetSnapshotFilters(): void {
 	for (const input of filterMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = false;
-	for (const input of viewMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = true;
-	viewOptions = { category: true, subcategory: true, itemNames: true };
+	for (const input of viewMenu.querySelectorAll<HTMLInputElement>('input')) {
+		input.checked = input.value !== 'sortByItemLevel';
+	}
+	viewOptions = { category: true, subcategory: true, itemNames: true, sortByItemLevel: false };
 	hiddenCategories = new Set();
 	activeCategory = null;
 	searchInput.value = '';
@@ -578,7 +580,7 @@ const subtypeAliases: Record<string, { classID: number; subClassIDs: number[] }>
 	polearm: { classID: 2, subClassIDs: [6] }, polearms: { classID: 2, subClassIDs: [6] },
 	shield: { classID: 4, subClassIDs: [6] }, shields: { classID: 4, subClassIDs: [6] },
 };
-const statusTerms = new Set(['soulbound', 'warbound', 'upgradeable', 'openable', 'usable']);
+const statusTerms = new Set(['equipment', 'soulbound', 'warbound', 'upgradeable', 'openable', 'usable']);
 const statusAliases: Record<string, string> = {
 	open: 'openable', loot: 'openable', war: 'warbound', band: 'warbound', up: 'upgradeable', upgrade: 'upgradeable',
 };
@@ -641,8 +643,12 @@ function itemMatchesSearch(item: LuaTable, terms: SearchTerm[]): boolean {
 			if (subClassID !== null && armorAliases[value] !== undefined && subClassID !== armorAliases[value]) return false;
 			if (subClassID !== null && armorAliases[value] === undefined && item.itemSubtype !== undefined && !includes(item.itemSubtype, value)) return false;
 		} else if (field === 'status') {
-			if (item.statusUnavailable === true && ['soulbound', 'warbound', 'upgradeable'].includes(value)) return false;
-			if (!snapshotItemMatchesStatus(item, value)) return false;
+			if (value === 'equipment') {
+				if (!getSnapshotEquipmentSlots(item).length) return false;
+			} else {
+				if (item.statusUnavailable === true && ['soulbound', 'warbound', 'upgradeable'].includes(value)) return false;
+				if (!snapshotItemMatchesStatus(item, value)) return false;
+			}
 		} else {
 			const searchable = [item.name, item.category, item.itemSubtype, item.itemLevel, item.equipLoc]
 				.map((part) => String(part ?? '').toLocaleLowerCase()).join(' ');
@@ -650,17 +656,6 @@ function itemMatchesSearch(item: LuaTable, terms: SearchTerm[]): boolean {
 		}
 	}
 	return true;
-}
-
-function groupBy<T>(items: T[], keyOf: (item: T) => string): Map<string, T[]> {
-	const groups = new Map<string, T[]>();
-	for (const item of items) {
-		const key = keyOf(item) || 'Other';
-		const values = groups.get(key) || [];
-		values.push(item);
-		groups.set(key, values);
-	}
-	return groups;
 }
 
 function hideItemTooltip(): void {
@@ -918,7 +913,7 @@ function observeIcon(image: HTMLImageElement, iconPath: string, file: IconFileSo
 	iconObserver.observe(image);
 }
 
-function renderCategoryList(groups: Map<string, LuaTable[]>): void {
+function renderCategoryList(groups: Map<string, LuaTable[]>, groupOrders?: Map<string, number>): void {
 	categoryTotal.textContent = groups.size ? String(groups.size) : '';
 	toggleAllCategories.disabled = groups.size === 0;
 	const anyVisible = [...groups.keys()].some((category) => !hiddenCategories.has(category));
@@ -933,7 +928,14 @@ function renderCategoryList(groups: Map<string, LuaTable[]>): void {
 	}
 
 	for (const [category, items] of [...groups.entries()]
-		.sort(([left], [right]) => left.localeCompare(right, undefined, { sensitivity: 'base' }))) {
+		.sort(([left], [right]) => {
+			if (groupOrders) {
+				const order = (groupOrders.get(left) ?? Number.MAX_SAFE_INTEGER)
+					- (groupOrders.get(right) ?? Number.MAX_SAFE_INTEGER);
+				if (order) return order;
+			}
+			return left.localeCompare(right, undefined, { sensitivity: 'base' });
+		})) {
 		const row = document.createElement('div');
 		row.className = 'category-row';
 		const hidden = hiddenCategories.has(category);
@@ -975,30 +977,28 @@ function renderCategoryList(groups: Map<string, LuaTable[]>): void {
 	}
 }
 
-function appendItemGrid(parent: HTMLElement, items: LuaTable[]): void {
+function appendItemGrid(
+	parent: HTMLElement,
+	items: LuaTable[],
+	equipmentOrder = filterMenu.querySelector<HTMLInputElement>('input[value="equipment"]')?.checked === true,
+): void {
 	const grid = document.createElement('div');
 	grid.className = 'item-grid';
-	items.sort((left, right) => {
-		const nameOrder = stringValue(left.name).localeCompare(stringValue(right.name), undefined, { sensitivity: 'base' });
-		if (nameOrder) return nameOrder;
-		const bagOrder = (numberValue(left.bagID) ?? 0) - (numberValue(right.bagID) ?? 0);
-		return bagOrder || (numberValue(left.slotIndex) ?? 0) - (numberValue(right.slotIndex) ?? 0);
-	});
-	for (const item of items) grid.append(createItemCard(item));
+	const sortedItems = [...items].sort((left, right) => compareSnapshotItems(left, right, {
+		equipment: equipmentOrder,
+		sortByItemLevel: viewOptions.sortByItemLevel,
+	}));
+	for (const item of sortedItems) grid.append(createItemCard(item));
 	parent.append(grid);
 }
 
-function appendSubcategoryGroups(parent: HTMLElement, items: LuaTable[]): void {
-	for (const [subtype, subtypeItems] of [...groupBy(items, (item) => stringValue(item.itemSubtype)).entries()]
-		.sort(([left], [right]) => {
-			if (!left || !right) return left ? -1 : right ? 1 : 0;
-			return left.localeCompare(right, undefined, { sensitivity: 'base' });
-		})) {
+function appendSubcategoryGroups(parent: HTMLElement, items: LuaTable[], equipmentOrder: boolean): void {
+	for (const [subtype, subtypeItems] of groupSnapshotItemsBySubcategory(items)) {
 		const heading = document.createElement('h4');
 		heading.className = 'subtype-heading';
 		heading.textContent = subtype || 'Other';
 		parent.append(heading);
-		appendItemGrid(parent, subtypeItems);
+		appendItemGrid(parent, subtypeItems, equipmentOrder);
 	}
 }
 
@@ -1027,18 +1027,39 @@ function renderInventory(): void {
 	}
 
 	const filters = new Set([...filterMenu.querySelectorAll<HTMLInputElement>('input:checked')].map((input) => input.value));
+	const equipmentOnly = filters.has('equipment');
 	const terms = parseSearch(searchInput.value, filters);
 	const bags = tableValues(snapshot.bags).map(valueTable).filter((bag): bag is LuaTable => bag !== null);
 	const records = bags.flatMap((bag) => tableValues(bag.items)
 		.map(valueTable)
 		.filter((item): item is LuaTable => item !== null))
 		.filter((item) => itemMatchesSearch(item, terms));
-	const groups = groupBy(records, (item) => stringValue(item.category, 'Other'));
-	renderCategoryList(groups);
+	const equipmentGroupOrders = new Map<string, number>();
+	const groups = new Map<string, LuaTable[]>();
+	const addToGroup = (name: string, item: LuaTable): void => {
+		const groupedItems = groups.get(name) || [];
+		groupedItems.push(item);
+		groups.set(name, groupedItems);
+	};
+	if (equipmentOnly) {
+		for (const item of records) {
+			for (const slot of getSnapshotEquipmentSlots(item)) {
+				addToGroup(slot.name, item);
+				equipmentGroupOrders.set(slot.name, slot.order);
+			}
+		}
+	} else {
+		for (const item of records) addToGroup(stringValue(item.category) || 'Other', item);
+	}
+	renderCategoryList(groups, equipmentOnly ? equipmentGroupOrders : undefined);
 	appFrame.classList.toggle('hide-item-names', !viewOptions.itemNames);
 	const visibleGroups = [...groups.entries()]
 		.filter(([category]) => !hiddenCategories.has(category))
-		.sort(([left], [right]) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
+		.sort(([left], [right]) => equipmentOnly
+			? (equipmentGroupOrders.get(left) ?? Number.MAX_SAFE_INTEGER)
+				- (equipmentGroupOrders.get(right) ?? Number.MAX_SAFE_INTEGER)
+				|| left.localeCompare(right, undefined, { sensitivity: 'base' })
+			: left.localeCompare(right, undefined, { sensitivity: 'base' }));
 	const visibleItems = visibleGroups.flatMap(([, items]) => items);
 	if (!visibleItems.length) {
 		showMessage('No items match this search and filter combination.');
@@ -1048,6 +1069,7 @@ function renderInventory(): void {
 		return;
 	}
 
+	const visibleUniqueItems = new Set(visibleItems).size;
 	const fragment = document.createDocumentFragment();
 	if (viewOptions.category) {
 		for (const [category, items] of visibleGroups) {
@@ -1059,31 +1081,37 @@ function renderInventory(): void {
 			heading.className = 'category-heading';
 			heading.textContent = category;
 			section.append(heading);
-			if (viewOptions.subcategory) appendSubcategoryGroups(section, items);
-			else appendItemGrid(section, items);
+			if (viewOptions.subcategory) appendSubcategoryGroups(section, items, false);
+			else appendItemGrid(section, items, false);
 			fragment.append(section);
 		}
 	} else {
 		const section = document.createElement('section');
 		section.className = 'category-section';
-		if (viewOptions.subcategory) appendSubcategoryGroups(section, visibleItems);
-		else appendItemGrid(section, visibleItems);
+		if (viewOptions.subcategory) appendSubcategoryGroups(section, visibleItems, equipmentOnly);
+		else appendItemGrid(section, visibleItems, equipmentOnly);
 		fragment.append(section);
 	}
 	inventoryContent.replaceChildren(fragment);
-	footerMessage.textContent = `${visibleItems.length} MATCHING SLOTS · READ ONLY`;
+	footerMessage.textContent = `${visibleUniqueItems} MATCHING SLOTS · READ ONLY`;
 }
 
 function getSnapshotCategories(): Set<string> {
 	const snapshot = currentSnapshot();
 	if (!snapshot) return new Set();
 	const categories = new Set<string>();
+	const equipmentOnly = filterMenu.querySelector<HTMLInputElement>('input[value="equipment"]')?.checked === true;
 	for (const bagValue of tableValues(snapshot.bags)) {
 		const bag = valueTable(bagValue);
 		if (!bag) continue;
 		for (const itemValue of tableValues(bag.items)) {
 			const item = valueTable(itemValue);
-			if (item) categories.add(stringValue(item.category, 'Other'));
+			if (!item) continue;
+			if (equipmentOnly) {
+				for (const slot of getSnapshotEquipmentSlots(item)) categories.add(slot.name);
+			} else {
+				categories.add(stringValue(item.category) || 'Other');
+			}
 		}
 	}
 	return categories;
@@ -1102,6 +1130,10 @@ function setAllCategoriesVisible(): void {
 
 function handleQuickFilterChange(event: Event): void {
 	const changed = event.target;
+	if (changed instanceof HTMLInputElement && changed.value === 'equipment') {
+		hiddenCategories = new Set();
+		activeCategory = null;
+	}
 	if (!(changed instanceof HTMLInputElement) || changed.type !== 'checkbox' || !changed.checked) {
 		renderInventory();
 		return;
@@ -1123,8 +1155,17 @@ function syncViewOptions(): void {
 		category: viewMenu.querySelector<HTMLInputElement>('input[value="category"]')?.checked === true,
 		subcategory: viewMenu.querySelector<HTMLInputElement>('input[value="subcategory"]')?.checked === true,
 		itemNames: viewMenu.querySelector<HTMLInputElement>('input[value="itemNames"]')?.checked === true,
+		sortByItemLevel: viewMenu.querySelector<HTMLInputElement>('input[value="sortByItemLevel"]')?.checked === true,
 	};
 	renderInventory();
+}
+
+function setAllViewOptions(checked: boolean): void {
+	for (const value of ['category', 'subcategory', 'itemNames']) {
+		const input = viewMenu.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+		if (input) input.checked = checked;
+	}
+	syncViewOptions();
 }
 
 function resetBrowser(): void {
@@ -1404,17 +1445,13 @@ tooltipCategoryToggle.addEventListener('change', () => {
 filterMenu.addEventListener('change', handleQuickFilterChange);
 filterClear.addEventListener('click', () => {
 	for (const input of filterMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = false;
+	hiddenCategories = new Set();
+	activeCategory = null;
 	renderInventory();
 });
 viewMenu.addEventListener('change', syncViewOptions);
-viewCheckAll.addEventListener('click', () => {
-	for (const input of viewMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = true;
-	syncViewOptions();
-});
-viewUncheckAll.addEventListener('click', () => {
-	for (const input of viewMenu.querySelectorAll<HTMLInputElement>('input')) input.checked = false;
-	syncViewOptions();
-});
+viewCheckAll.addEventListener('click', () => setAllViewOptions(true));
+viewUncheckAll.addEventListener('click', () => setAllViewOptions(false));
 toggleAllCategories.addEventListener('click', setAllCategoriesVisible);
 document.addEventListener('pointerdown', (event) => {
 	const target = event.target;
