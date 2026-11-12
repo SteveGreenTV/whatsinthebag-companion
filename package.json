@@ -2,7 +2,7 @@
   "name": "whats-in-the-bag-witb-companion",
   "private": true,
   "description": "Offline, read-only viewer for What's in the Bag? inventory snapshots.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

@@ -16,6 +16,15 @@ For macOS, open the disk image and drag the app to Applications. The app is ad-h
 
 Install the [What's in the bag? addon from CurseForge](https://www.curseforge.com/wow/addons/whats-in-the-bag) for your WoW game version to create snapshots. The companion can open `_retail_` and `_forever_` game folders; Forever requires the addon's Forever/Camelot build. Log into the characters you want to view and open their bags and banks, then log out or exit WoW so the client writes the SavedVariables file. The companion shows saved snapshots, not live inventory.
 
+## What's New in 0.6.0
+
+0.6.0 is a release candidate. The manual GitHub macOS ARM64 build has not yet run; do not produce other release artifacts until it succeeds.
+
+- Filter saved items to Equipment and browse them grouped by equipment slot. The companion shows snapshot items only; it does not add current equipped-item references.
+- Add **Sort by item level** to View. It is off by default; when enabled, equipment slot order stays primary and items sort by descending item level within each slot. Without Equipment, item level sorts within the current category or subcategory section; unknown levels come last.
+- In the Alts menu, search all terms within one saved item name across Bags or Bank. Characters with no matching item are hidden while searching, and matching storage buttons remain highlighted.
+- Exclude invalid `0/0` upgrade tracks from the Upgradeable filter.
+
 ## What's New in 0.5.1
 
 - Include fully upgraded items in the upgradeable filter and keep their completed track level, such as `C6/6`, visible.
@@ -38,7 +47,7 @@ Install the [What's in the bag? addon from CurseForge](https://www.curseforge.co
 
 ### Included from 0.4.0
 
-- Search saved item names in the Alts popup. Matching Bags and Bank buttons are highlighted independently; nonmatches are dimmed. All search terms must occur in the same item name, ignoring case.
+- Search saved item names in the Alts popup. Matching Bags and Bank buttons are highlighted independently. All search terms must occur in the same item name, ignoring case.
 - The item filter bar spans both panes with a small blank area on its left and more space above the lists.
 - The category column fits its contents, and View and Filters share red-and-gold styling.
 - Search hints and Alts/account popups render above the controls they overlap.
@@ -49,7 +58,9 @@ Snapshots remain read-only. Alts search uses saved item names only and does not 
 
 1. Start the app, click **Open game folder**, and choose the WoW `_retail_` or `_forever_` folder.
 2. Click **Select account** and choose an account found under `WTF/Account/<Name>/SavedVariables/WhatsInTheBag.lua`.
-3. Use **Alts** to open a character's Bags or Bank in its own window. Search inside the Alts popup to highlight storage containing a matching saved item name and dim nonmatches. Search is case-insensitive; all whitespace-separated terms must occur in the same item name. The main window shows the Warband Bank by default when one is available.
+3. Use **Alts** to open a character's Bags or Bank in its own window. Search inside the Alts popup to show only characters whose Bags or Bank contains a matching item name; matching storage buttons are highlighted independently. The hint explains that all terms must occur in the same item name. The main window shows the Warband Bank by default when one is available.
+
+Use **Filters > Equipment** to show saved equippable items in equipment-slot order. This does not add equipped-item references. In **View**, enable **Sort by item level** to sort highest to lowest within the current sections; with Equipment active, slot order remains primary. Missing item levels sort last. Turning the option off retains alphabetical item-name sorting.
 
 Changing accounts or opening a different game folder closes open character windows. Only one game folder is selected at a time. Items remain read-only; the companion cannot move or use them. Hover details contain only information captured in the snapshot, not the full live WoW tooltip.
 
@@ -118,7 +129,7 @@ npm run release:win:portable
 This builds a Windows x64 portable executable at:
 
 ```text
-release/WITB_Companion_0.5.1.exe
+release/WITB_Companion_0.6.0.exe
 ```
 
 The filename follows the version in `package.json`. Run the EXE directly, or copy it to another Windows x64 computer. It includes Electron and does not require Node.js on that computer. Building locally does not publish a GitHub release.
@@ -133,3 +144,7 @@ npm run release:mac:x64
 ```
 
 Each command builds an ad-hoc-signed, unnotarized DMG in `release/`, named with the package version and architecture. The build uses the macOS `sips`, `iconutil`, and code-signing tools. Building locally does not publish a GitHub release.
+
+## Test the macOS ARM64 Build in GitHub
+
+The **macOS ARM64 test build** GitHub Actions workflow is manually triggered from **Actions > macOS ARM64 test build > Run workflow**. It uses a GitHub-hosted ARM64 macOS runner and runs `npm run release:mac:arm64` without publishing a GitHub release. On success, the generated DMG is uploaded as a workflow artifact. Run this early in release preparation to verify that the runner is available and has enough resources; do not continue with other release artifacts unless the ARM64 build succeeds.
