@@ -113,9 +113,9 @@ const frameState = document.querySelector<HTMLElement>('#window-state')!;
 const characterList = document.querySelector<HTMLElement>('#character-list')!;
 const rosterSearchInput = document.createElement('input');
 rosterSearchInput.type = 'search';
-rosterSearchInput.placeholder = 'Search items';
+rosterSearchInput.placeholder = 'Search item names';
 rosterSearchInput.autocomplete = 'off';
-rosterSearchInput.setAttribute('aria-label', 'Search items across alt bags and banks');
+rosterSearchInput.setAttribute('aria-label', 'Search item names in alt Bags and Banks');
 rosterSearchInput.addEventListener('input', updateRosterSearch);
 const characterToggle = document.querySelector<HTMLButtonElement>('#character-toggle')!;
 const characterSelectionLabel = document.querySelector<HTMLElement>('#character-selection-label')!;
@@ -464,6 +464,7 @@ function updateRosterSearch(): void {
 	const characters = valueTable(account?.characterSnapshots);
 	const query = rosterSearchInput.value;
 	const searching = query.trim().length > 0;
+	let matchingCharacters = 0;
 	for (const button of characterList.querySelectorAll<HTMLButtonElement>('.storage-button')) {
 		const character = valueTable(characters?.[button.dataset.characterKey || '']);
 		const matches = snapshotMatchesNameSearch(character?.[button.dataset.storage || ''], query);
@@ -473,6 +474,14 @@ function updateRosterSearch(): void {
 			? `${button.textContent}: ${matches ? 'Contains a matching saved item' : 'No matching saved item'}`
 			: '';
 	}
+	for (const entry of characterList.querySelectorAll<HTMLElement>('.character-entry')) {
+		const character = valueTable(characters?.[entry.dataset.characterKey || '']);
+		const matches = snapshotCharacterMatchesNameSearch(character, query);
+		entry.hidden = searching && !matches;
+		if (!entry.hidden) matchingCharacters += 1;
+	}
+	const noMatches = characterList.querySelector<HTMLElement>('.roster-no-matches');
+	if (noMatches) noMatches.hidden = !searching || matchingCharacters > 0;
 }
 
 function renderRoster(): void {
@@ -492,6 +501,10 @@ function renderRoster(): void {
 	searchIcon.setAttribute('aria-hidden', 'true');
 	searchBox.append(searchIcon, rosterSearchInput);
 	characterList.append(searchBox);
+	const searchHint = document.createElement('small');
+	searchHint.className = 'roster-search-hint';
+	searchHint.textContent = 'All terms must match one item name in Bags or Bank.';
+	characterList.append(searchHint);
 	const characters = valueTable(account.characterSnapshots);
 	const entries = Object.entries(characters || {})
 		.filter(([, record]) => isLuaTable(record) && (isLuaTable(record.bags) || isLuaTable(record.characterBank)))
@@ -507,6 +520,7 @@ function renderRoster(): void {
 		const record = valueTable(recordValue)!;
 		const entry = document.createElement('section');
 		entry.className = 'character-entry';
+		entry.dataset.characterKey = key;
 		const heading = document.createElement('div');
 		heading.className = 'character-name';
 		const name = document.createElement('span');
@@ -523,6 +537,11 @@ function renderRoster(): void {
 		entry.append(heading, actions);
 		characterList.append(entry);
 	}
+	const noMatches = document.createElement('p');
+	noMatches.className = 'rail-empty roster-no-matches';
+	noMatches.textContent = 'No characters have matching items in Bags or Bank.';
+	noMatches.hidden = true;
+	characterList.append(noMatches);
 
 	updateRosterSearch();
 	updateCharacterSelectionLabel();
