@@ -18,7 +18,7 @@ Install the [What's in the bag? addon from CurseForge](https://www.curseforge.co
 
 ## What's New in 0.6.0
 
-0.6.0 is a release candidate. The manual GitHub macOS ARM64 build has not yet run; do not produce other release artifacts until it succeeds.
+The macOS ARM64 test build has passed on GitHub Actions. Release artifacts will be produced by the versioned release workflow.
 
 - Filter saved items to Equipment and browse them grouped by equipment slot. The companion shows snapshot items only; it does not add current equipped-item references.
 - Add **Sort by item level** to View. It is off by default; when enabled, equipment slot order stays primary and items sort by descending item level within each slot. Without Equipment, item level sorts within the current category or subcategory section; unknown levels come last.
